@@ -1,16 +1,23 @@
 package com.ldtteam.common.network;
 
+import com.ldtteam.common.platform.EnvUtil;
 import com.mojang.logging.LogUtils;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 /**
@@ -201,66 +208,80 @@ public record PlayMessageType<T extends AbstractUnsidedPlayMessage>(Type<T> id,
     }
 
     /**
-     * Call this in following code:
-     * 
-     * <pre>
-     * public static void onNetworkRegistry(final RegisterPayloadHandlerEvent event)
-     * {
-     *     final String modVersion = ModList.get().getModContainerById(Constants.MOD_ID).get().getModInfo().getVersion().toString();
-     *     final PayloadRegistrar registry = event.registrar(Constants.MOD_ID).versioned(modVersion);
-     * 
-     *     // MyMessage extends one of AbstractPlayMessage, AbstractClientPlayMessage, AbstractServerPlayMessage
-     *     MyMessage.TYPE.register(registry);
-     * }
-     * </pre>
-     * 
-     * @param registry event network registry
+     * Register the payload type and the appropriate Fabric handlers.
+     *
+     * @param ignored retained for source-level call-site compatibility, ignored on Fabric
      */
-    public void register(final PayloadRegistrar registry)
+    public void register(final Object ignored)
     {
-        if (client != null && server != null)
+        register();
+    }
+
+    public void register()
+    {
+        NetworkServerState.init();
+
+        if (client != null)
         {
-            registry.playBidirectional(id, codec, this::onBidirectional);
+            registerClientbound();
         }
-        else if (client != null)
+
+        if (server != null)
         {
-            registry.playToClient(id, codec, this::onClient);
-        }
-        else if (server != null)
-        {
-            registry.playToServer(id, codec, this::onServer);
+            registerServerbound();
         }
     }
 
-    private void onBidirectional(final T payload, final IPayloadContext context)
+    private void registerClientbound()
     {
-        switch (context.flow())
+        if (REGISTERED_S2C_TYPES.add(id))
         {
-            case CLIENTBOUND -> onClient(payload, context);
-            case SERVERBOUND -> onServer(payload, context);
+            PayloadTypeRegistry.playS2C().register(id, codec);
+        }
+
+        if (EnvUtil.isClient() && REGISTERED_CLIENT_HANDLERS.add(id))
+        {
+            ClientReceiverRegistrar.register(id, this::onClient);
         }
     }
 
-    private void onClient(final T payload, final IPayloadContext context)
+    private void registerServerbound()
     {
-        final Player player = context.player();
+        if (REGISTERED_C2S_TYPES.add(id))
+        {
+            PayloadTypeRegistry.playC2S().register(id, codec);
+        }
+
+        if (REGISTERED_SERVER_HANDLERS.add(id))
+        {
+            ServerPlayNetworking.registerGlobalReceiver(id, this::onServer);
+        }
+    }
+
+    private void onClient(final T payload, final ClientPlayNetworking.Context context)
+    {
+        final PlayMessageContext playMessageContext = new ClientPayloadContext(context);
+        final Player player = playMessageContext.player();
         if (!allowNullPlayer && player == null)
         {
-            wrongPlayerException(context, payload);
+            wrongPlayerException(playMessageContext, payload);
             return;
         }
-        client.handle(payload, context, player);
+
+        client.handle(payload, playMessageContext, player);
     }
 
-    private void onServer(final T payload, final IPayloadContext context)
+    private void onServer(final T payload, final ServerPlayNetworking.Context context)
     {
-        final ServerPlayer serverPlayer = context.player() instanceof final ServerPlayer sp ? sp : null;
+        final PlayMessageContext playMessageContext = new ServerPayloadContext(context);
+        final ServerPlayer serverPlayer = playMessageContext.player() instanceof final ServerPlayer sp ? sp : null;
         if ((!allowNullPlayer && serverPlayer == null))
         {
-            wrongPlayerException(context, payload);
+            wrongPlayerException(playMessageContext, payload);
             return;
         }
-        server.handle(payload, context, serverPlayer);
+
+        server.handle(payload, playMessageContext, serverPlayer);
     }
 
     private static <T extends AbstractUnsidedPlayMessage, U extends Player> PayloadAction<T, U> threadRedirect(
@@ -273,7 +294,12 @@ public record PlayMessageType<T extends AbstractUnsidedPlayMessage>(Type<T> id,
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static void wrongPlayerException(final IPayloadContext context, final AbstractUnsidedPlayMessage payload)
+    private static final Set<Type<?>> REGISTERED_S2C_TYPES = ConcurrentHashMap.newKeySet();
+    private static final Set<Type<?>> REGISTERED_C2S_TYPES = ConcurrentHashMap.newKeySet();
+    private static final Set<Type<?>> REGISTERED_CLIENT_HANDLERS = ConcurrentHashMap.newKeySet();
+    private static final Set<Type<?>> REGISTERED_SERVER_HANDLERS = ConcurrentHashMap.newKeySet();
+
+    private static void wrongPlayerException(final PlayMessageContext context, final AbstractUnsidedPlayMessage payload)
     {
         final Player player = context.player();
         LOGGER.warn("Invalid packet received for - " + payload.getClass().getName() +
@@ -285,7 +311,7 @@ public record PlayMessageType<T extends AbstractUnsidedPlayMessage>(Type<T> id,
     @FunctionalInterface
     private interface PayloadAction<T, U>
     {
-        void handle(T payload, IPayloadContext context, U player);
+        void handle(T payload, PlayMessageContext context, U player);
     }
 
     /**
@@ -326,6 +352,75 @@ public record PlayMessageType<T extends AbstractUnsidedPlayMessage>(Type<T> id,
         public void encode(RegistryFriendlyByteBuf buf, T msg)
         {
             msg.toBytes(buf);
+        }
+    }
+
+    @Environment(EnvType.CLIENT)
+    private static final class ClientReceiverRegistrar
+    {
+        private ClientReceiverRegistrar()
+        {
+        }
+
+        private static <T extends AbstractUnsidedPlayMessage> void register(final Type<T> id,
+            final ClientPlayNetworking.PlayPayloadHandler<T> handler)
+        {
+            ClientPlayNetworking.registerGlobalReceiver(id, handler);
+        }
+    }
+
+    @Environment(EnvType.CLIENT)
+    private record ClientPayloadContext(ClientPlayNetworking.Context context) implements PlayMessageContext
+    {
+        @Override
+        public Flow flow()
+        {
+            return Flow.CLIENTBOUND;
+        }
+
+        @Override
+        public Player player()
+        {
+            return context.player();
+        }
+
+        @Override
+        public net.fabricmc.fabric.api.networking.v1.PacketSender responseSender()
+        {
+            return context.responseSender();
+        }
+
+        @Override
+        public void enqueueWork(final Runnable runnable)
+        {
+            context.client().execute(runnable);
+        }
+    }
+
+    private record ServerPayloadContext(ServerPlayNetworking.Context context) implements PlayMessageContext
+    {
+        @Override
+        public Flow flow()
+        {
+            return Flow.SERVERBOUND;
+        }
+
+        @Override
+        public Player player()
+        {
+            return context.player();
+        }
+
+        @Override
+        public net.fabricmc.fabric.api.networking.v1.PacketSender responseSender()
+        {
+            return context.responseSender();
+        }
+
+        @Override
+        public void enqueueWork(final Runnable runnable)
+        {
+            context.server().execute(runnable);
         }
     }
 }

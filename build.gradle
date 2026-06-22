@@ -90,6 +90,14 @@ sourceSets {
             include 'com/ldtteam/common/config/ConfigBackend.java'
             include 'com/ldtteam/common/config/Configurations.java'
             include 'com/ldtteam/common/config/ClientConfigHelper.java'
+            include 'com/ldtteam/common/network/AbstractPlayMessage.java'
+            include 'com/ldtteam/common/network/AbstractClientPlayMessage.java'
+            include 'com/ldtteam/common/network/AbstractServerPlayMessage.java'
+            include 'com/ldtteam/common/network/AbstractUnsidedPlayMessage.java'
+            include 'com/ldtteam/common/network/IClientboundDistributor.java'
+            include 'com/ldtteam/common/network/IServerboundDistributor.java'
+            include 'com/ldtteam/common/network/PlayMessageContext.java'
+            include 'com/ldtteam/common/network/PlayMessageType.java'
         }
     }
 }
