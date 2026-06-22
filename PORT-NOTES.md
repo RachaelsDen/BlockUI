@@ -155,7 +155,7 @@ These are intentional behavior changes from the NeoForge version, made because F
 
 1. **`BOWindow.openAsLayer()`**: Uses `Minecraft.setScreen()` with `previousScreen` tracking instead of `pushGuiLayer`/`popGuiLayer`. Fabric has no screen layer system. The previous screen is saved and restored manually.
 
-2. **`BOScreen.FABRIC_GUI_FAR_PLANE = 1000.0F`**: Replaces `ClientHooks.getGuiFarPlane()` (NeoForge-only). Hardcoded to 1000.0F, the same value NeoForge returns.
+2. **`BOScreen.FABRIC_GUI_FAR_PLANE = 21000.0F`**: Replaces `ClientHooks.getGuiFarPlane()` (NeoForge-only). Set to 21000.0F to match vanilla MC 1.21.1's orthographic far plane (`setOrtho(0, w, h, 0, 1000.0F, 21000.0F`). With this value, the model-view translate becomes `10000 - 21000 = -11000`, matching vanilla's `-11000.0F` exactly. The original port used 1000.0F which created a degenerate projection (near == far) and made the GUI invisible.
 
 3. **`BlockStateRenderingData`**: The `ModelData` field is removed. Evaluation changed from lazy (via `Lazy<>`) to eager. The T1 spike proved this is safe for all current GUI rendering paths.
 
@@ -171,11 +171,65 @@ These are intentional behavior changes from the NeoForge version, made because F
 
 9. **`OutOfJarResourceLocation.compareNamespaced()`**: The namespace-first comparison is inlined. Vanilla `ResourceLocation` lacks the `compareNamespaced` method that NeoForge adds.
 
-10. **Client initialization deferred to `ClientLifecycleEvents.CLIENT_STARTED`**: NeoForge fires `RegisterClientReloadListenersEvent` during mod loading, which happens before the resource manager is ready. Fabric requires deferring resource listener registration until `CLIENT_STARTED` to avoid NPEs.
+10. **Reload listener registration via `ResourceManagerHelper`**: `Loader.INSTANCE` (XML cache), the container tag refresh listener, and `AtlasManager.INSTANCE` (texture atlas) are all registered via `ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener()` in `BlockUIClient.onInitializeClient()`. This ensures they participate in the initial client resource reload. `ClientLifecycleEvents.CLIENT_STARTED` fires AFTER the initial reload, so registering there leaves caches empty. Color providers and tick event handlers still register in `CLIENT_STARTED` as they don't need the initial reload.
+
+11. **`AtlasManager` implements `IdentifiableResourceReloadListener`**: In vanilla Fabric, `AtlasManager` must implement `IdentifiableResourceReloadListener` and be registered via `ResourceManagerHelper` to participate in the initial resource reload. The `CustomGuiSpriteManager` is created lazily inside `reload()` where `Minecraft.getInstance().getTextureManager()` is available. Without this, the custom sprite atlas is empty (0x0), causing `Invalid texture size: 0x0` crashes when dumping or rendering atlas contents.
 
 ---
 
-## 8. Cherry-Pick Guide
+## 9. Vanilla-Clean File Modifications
+
+The port plan's original constraint was "widget/view/XML/Pane code stays byte-identical (except @Environment annotations)." In practice, several vanilla-clean files reference NeoForge-added APIs that do not exist in vanilla MC 1.21.1. These files MUST be modified for the code to compile.
+
+### Changes by category:
+
+#### A. NeoForge API → Vanilla API Replacements (required for compilation)
+
+| File | NeoForge API Removed | Vanilla Replacement | Justification |
+|---|---|---|---|
+| `views/BOWindow.java` | `Minecraft.pushGuiLayer()`, `Minecraft.popGuiLayer()` | Manual `previousScreen` tracking via `BOScreen.setPreviousScreen()`/`getPreviousScreen()` | `pushGuiLayer`/`popGuiLayer` are NeoForge additions to `Minecraft`. Vanilla MC 1.21.1 has no screen layer system. |
+| `controls/ItemIcon.java` | `CreativeModeTabRegistry.getSortedCreativeModeTabs()` | `CreativeModeTabs.allTabs()` | `CreativeModeTabRegistry` is a NeoForge class. `CreativeModeTabs.allTabs()` is the vanilla equivalent. |
+| `controls/ItemIconWithProperties.java` | `ItemPropertyFunction` type | `ClampedItemPropertyFunction` type | Vanilla MC 1.21.1 changed `ItemProperties.register()` to accept `ClampedItemPropertyFunction` instead of `ItemPropertyFunction`. This is a vanilla API change, not Fabric-specific. |
+| `controls/AbstractTextElement.java` | `NeoForgeRenderTypes.enableTextTextureLinearFiltering` | Computed but unused (TODO comment) | `NeoForgeRenderTypes` is a NeoForge-only class. The linear filtering value is still computed but not applied (Fabric has no equivalent runtime toggle). |
+| `BOScreen.java` | `ClientHooks.getGuiFarPlane()`, `NeoForgeRenderTypes.enableTextTextureLinearFiltering` | `FABRIC_GUI_FAR_PLANE` constant (21000.0F), filtering toggles removed | Both are NeoForge-only APIs. The far plane value matches vanilla MC 1.21.1 exactly. |
+
+#### B. @Environment / FMLEnvironment Swaps (expected per plan)
+
+| File | Change |
+|---|---|
+| `views/BOWindow.java` | `@OnlyIn(Dist.CLIENT)` → `@Environment(EnvType.CLIENT)` |
+| `controls/ButtonImage.java` | `FMLEnvironment.production` → `EnvUtil.isProduction()` |
+| `controls/CheckBox.java` | `FMLEnvironment.production` → `EnvUtil.isProduction()` |
+| `controls/Image.java` | `FMLEnvironment.production` → `EnvUtil.isProduction()` (2 locations) |
+
+#### C. Minor Compile Fixes
+
+| File | Change | Justification |
+|---|---|---|
+| `PaneParams.java` | Added `import org.jetbrains.annotations.Nullable;` | Needed for compilation after NeoForge imports removed. |
+| `util/color/ColouredVertexConsumer.java` | Removed `NeoForgeRenderTypes` import and `misc()` method override | NeoForge-only API. |
+| `util/texture/CursorTexture.java` | Removed unused `import com.ldtteam.blockui.Pane;` | Unused import that caused compile error when Pane wasn't on classpath. |
+| `util/texture/OutOfJarTexture.java` | Minor import fix | NeoForge import removal. |
+| `util/resloc/OutOfJarResourceLocation.java` | Inlined `compareNamespaced()` comparison | Vanilla `ResourceLocation` lacks this NeoForge-added method. |
+
+### New Public API Additions
+
+The port adds two new public methods to `BOScreen`:
+- `public void setPreviousScreen(Screen previousScreen)` 
+- `public Screen getPreviousScreen()`
+
+These are required because vanilla MC 1.21.1 has no screen layer system. The original `pushGuiLayer`/`popGuiLayer` calls in `BOWindow` are replaced with manual screen tracking. This is the minimum API surface needed to preserve the original behavior (opening/closing windows with screen restoration).
+
+### Summary
+
+All changes to vanilla-clean files fall into three categories:
+1. **NeoForge API → Vanilla API replacements** — required for compilation (NeoForge classes don't exist)
+2. **@Environment/FMLEnvironment swaps** — expected per port plan
+3. **Minor compile fixes** — import removals and inline replacements
+
+No behavioral changes were made beyond what's required by the NeoForge→Fabric API differences.
+
+## 10. Cherry-Pick Guide
 
 When upstream `version/main` receives fixes, you can apply them to `version/fabric`:
 
@@ -209,9 +263,10 @@ These files contain Fabric-specific adaptations. Cherry-picks touching them will
 
 These files are vanilla-clean and should cherry-pick without issues:
 
-- `com/ldtteam/blockui/controls/` (buttons, text, images, etc.)
-- `com/ldtteam/blockui/views/` (scroll views, lists, etc.)
-- `com/ldtteam/blockui/Pane.java`
+- `com/ldtteam/blockui/Pane.java` (completely unmodified)
+- `com/ldtteam/blockui/controls/TextField.java` (completely unmodified)
+- `com/ldtteam/blockui/controls/` — most files only have @Environment swaps, but some have NeoForge API replacements (see Section 9)
+- `com/ldtteam/blockui/views/` — most files are unmodified, but `BOWindow.java` has NeoForge API replacements (see Section 9)
 - `com/ldtteam/blockui/util/` (color, utility classes)
 - `com/ldtteam/blockui/` package (pure UI logic)
 - `src/main/resources/assets/` (textures, XML, lang files)
