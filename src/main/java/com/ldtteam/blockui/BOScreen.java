@@ -23,7 +23,7 @@ import java.util.Objects;
  */
 public class BOScreen extends Screen
 {
-    private static final float FABRIC_GUI_FAR_PLANE = 1000.0F;
+    private static final float FABRIC_GUI_FAR_PLANE = 21000.0F;
 
     protected double renderScale = 1.0d;
     protected double mcScale = 1.0d;
@@ -74,8 +74,6 @@ public class BOScreen extends Screen
         final int guiWidth = Math.max(framebufferWidth, 320);
         final int guiHeight = Math.max(framebufferHeight, 240);
 
-        // TODO: T13 — refine for visual parity once Fabric text filtering is revisited.
-
         mcScale = ms.minecraft.getWindow().getGuiScale();
         renderScale = window.getRenderType().calcRenderScale(ms.minecraft.getWindow(), window);
 
@@ -98,7 +96,6 @@ public class BOScreen extends Screen
             VertexSorting.ORTHOGRAPHIC_Z);
         shaderPs.pushMatrix();
         shaderPs.identity();
-        // TODO: T13 — refine for visual parity if Fabric needs a different GUI far plane translation.
         shaderPs.translate(0.0f, 0.0f, 10000f - FABRIC_GUI_FAR_PLANE);
         RenderSystem.applyModelViewMatrix();
 
