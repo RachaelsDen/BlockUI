@@ -1,1 +1,19 @@
 accessWidener v2 named
+accessible field net/minecraft/world/entity/LivingEntity dead Z
+accessible method net/minecraft/network/chat/Style <init> (Lnet/minecraft/network/chat/TextColor;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Lnet/minecraft/network/chat/ClickEvent;Lnet/minecraft/network/chat/HoverEvent;Ljava/lang/String;Lnet/minecraft/resources/ResourceLocation;)V
+accessible method net/minecraft/client/gui/GuiGraphics <init> (Lnet/minecraft/client/Minecraft;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;)V
+accessible field net/minecraft/client/gui/GuiGraphics minecraft Lnet/minecraft/client/Minecraft;
+accessible method net/minecraft/server/packs/resources/FallbackResourceManager convertToMetadata (Lnet/minecraft/server/packs/resources/IoSupplier;)Lnet/minecraft/server/packs/resources/IoSupplier;
+accessible field com/mojang/blaze3d/platform/NativeImage pixels J
+mutable field com/mojang/blaze3d/platform/NativeImage pixels J
+accessible field com/mojang/blaze3d/vertex/PoseStack poseStack Ljava/util/Deque;
+mutable field com/mojang/blaze3d/vertex/PoseStack poseStack Ljava/util/Deque;
+accessible field net/minecraft/client/resources/model/ModelBakery modelResources Ljava/util/Map;
+accessible field net/minecraft/client/resources/model/ModelBakery topLevelModels Ljava/util/Map;
+accessible field net/minecraft/client/gui/GuiSpriteManager METADATA_SECTIONS Ljava/util/Set;
+accessible field net/minecraft/client/resources/TextureAtlasHolder textureAtlas Lnet/minecraft/client/renderer/texture/TextureAtlas;
+accessible field net/minecraft/client/gui/components/AbstractButton SPRITES Lnet/minecraft/client/gui/components/WidgetSprites;
+extendable class net/minecraft/resources/ResourceLocation
+accessible method net/minecraft/resources/ResourceLocation <init> (Ljava/lang/String;Ljava/lang/String;)V
+accessible field net/minecraft/client/renderer/texture/HttpTexture file Ljava/io/File;
+mutable field net/minecraft/client/renderer/texture/HttpTexture file Ljava/io/File;
