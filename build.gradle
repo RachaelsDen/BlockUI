@@ -73,16 +73,6 @@ tasks.withType(JavaCompile).configureEach {
     options.release = project.javaVersion as int
 }
 
-sourceSets {
-    main {
-        java {
-            // Blacklist mode: exclude only files with hard NeoForge dependencies
-            // that require their dedicated follow-up port tasks.
-            exclude 'com/ldtteam/common/fakelevel/**'
-        }
-    }
-}
-
 processResources {
     inputs.property 'version', project.version
 

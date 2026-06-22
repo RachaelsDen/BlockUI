@@ -26,7 +26,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.ticks.BlackholeTickAccess;
 import net.minecraft.world.ticks.TickContainerAccess;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Collections;
@@ -116,12 +115,6 @@ public class FakeChunk extends LevelChunk
         return getBlockEntities().keySet();
     }
 
-    @Override
-    public ModelData getModelData(BlockPos pos)
-    {
-        return fakeLevel.getModelData(pos);
-    }
-
     // ========================================
     // ======= NOOP UNSAFE NULL METHODS =======
     // ========================================
@@ -193,7 +186,6 @@ public class FakeChunk extends LevelChunk
     // =========== SECTION RELATED ============
     // ========================================
 
-    @Override
     public void findBlocks(Predicate<BlockState> filter,
         BiPredicate<BlockState, BlockPos> fineFilter,
         BiConsumer<BlockPos, BlockState> sink)
@@ -302,7 +294,7 @@ public class FakeChunk extends LevelChunk
     }
 
     @Override
-    @javax.annotation.Nullable
+    @Nullable
     public BlockState setBlockState(BlockPos p_62865_, BlockState p_62866_, boolean p_62867_)
     {
         // Noop
@@ -340,7 +332,7 @@ public class FakeChunk extends LevelChunk
     }
 
     @Override
-    @javax.annotation.Nullable
+    @Nullable
     public CompoundTag getBlockEntityNbt(BlockPos p_62103_)
     {
         // Noop, for pending BEs only

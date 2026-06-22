@@ -54,8 +54,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.ticks.BlackholeTickAccess;
 import net.minecraft.world.ticks.LevelTickAccess;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelDataManager;
 import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -97,7 +95,6 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
 
     protected final FakeChunkSource chunkSource;
     protected final FakeLevelLightEngine lightEngine;
-    protected final ModelDataManager modelDataManager;
     protected FakeLevelEntityGetterAdapter levelEntityGetter = FakeLevelEntityGetterAdapter.EMPTY;
     // TODO: this is currently manually filled by class user - ideally if not filled yet this should get constructed from levelSource
     // manually
@@ -144,7 +141,6 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
         this.scoreboard = scoreboard;
         this.overrideBeLevel = overrideBeLevel;
         this.chunkSource = new FakeChunkSource(this);
-        this.modelDataManager = new ModelDataManager(this);
         this.lightEngine = new FakeLevelLightEngine(this);
 
         setRealLevel(realLevel); // intentionally due to init
@@ -392,7 +388,7 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
     }
 
     @Override
-    @javax.annotation.Nullable
+    @Nullable
     public Entity getEntity(int id)
     {
         return levelEntityGetter.get(id);
@@ -433,19 +429,6 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
     public ChunkSource getChunkSource()
     {
         return chunkSource;
-    }
-
-    @Override
-    public ModelData getModelData(BlockPos pos)
-    {
-        return modelDataManager.getAt(pos);
-    }
-
-    @Override
-    @Nullable
-    public ModelDataManager getModelDataManager()
-    {
-        return modelDataManager;
     }
 
     @Override
@@ -514,16 +497,14 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
         return realLevel().potionBrewing();
     }
 
-    @Override
     public float getDayTimeFraction()
     {
-        return realLevel().getDayTimeFraction();
+        return getDayTime() / 24000.0f;
     }
 
-    @Override
     public float getDayTimePerTick()
     {
-        return realLevel().getDayTimePerTick();
+        return 1.0f / 24000.0f;
     }
 
     // ========================================
@@ -616,7 +597,7 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
     }
 
     @Override
-    public void playSeededSound(@javax.annotation.Nullable Player p_220372_,
+    public void playSeededSound(@Nullable Player p_220372_,
         Entity p_220373_,
         Holder<SoundEvent> p_263500_,
         SoundSource p_220375_,
@@ -628,7 +609,7 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
     }
 
     @Override
-    public void playSeededSound(@javax.annotation.Nullable Player p_262953_,
+    public void playSeededSound(@Nullable Player p_262953_,
         double p_263004_,
         double p_263398_,
         double p_263376_,
@@ -674,7 +655,7 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
     }
 
     @Override
-    public void levelEvent(@javax.annotation.Nullable Player p_46771_, int p_46772_, BlockPos p_46773_, int p_46774_)
+    public void levelEvent(@Nullable Player p_46771_, int p_46772_, BlockPos p_46773_, int p_46774_)
     {
         // Noop
     }
@@ -689,7 +670,6 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
         // Noop
     }
 
-    @Override
     public void addFreshBlockEntities(Collection<BlockEntity> beList)
     {
         // Noop
@@ -708,15 +688,14 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
     }
 
     @Override
-    public boolean destroyBlock(BlockPos p_46626_, boolean p_46627_, @javax.annotation.Nullable Entity p_46628_, int p_46629_)
+    public boolean destroyBlock(BlockPos p_46626_, boolean p_46627_, @Nullable Entity p_46628_, int p_46629_)
     {
         // Noop
         return false;
     }
 
-    @Override
     public void markAndNotifyBlock(BlockPos p_46605_,
-        @javax.annotation.Nullable LevelChunk levelchunk,
+        @Nullable LevelChunk levelchunk,
         BlockState blockstate,
         BlockState p_46606_,
         int p_46607_,
@@ -806,25 +785,21 @@ public class FakeLevel<SOURCE extends IFakeLevelBlockGetter> extends Level
         // Noop
     }
 
-    @Override
     public void invalidateCapabilities(BlockPos pos)
     {
         // Noop
     }
 
-    @Override
     public void invalidateCapabilities(ChunkPos pos)
     {
         // Noop
     }
 
-    @Override
     public void setDayTimeFraction(final float v)
     {
         // Noop
     }
 
-    @Override
     public void setDayTimePerTick(final float v)
     {
         // Noop

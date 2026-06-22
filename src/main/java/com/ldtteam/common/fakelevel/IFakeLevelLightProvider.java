@@ -4,7 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.lighting.LightEngine;
-import net.neoforged.neoforge.common.ModConfigSpec.IntValue;
+
+import java.util.function.IntSupplier;
 
 /**
  * Loosely based on {@link BlockAndTintGetter}
@@ -88,9 +89,9 @@ public interface IFakeLevelLightProvider
      */
     public static class ConfigBasedLightProvider implements IFakeLevelLightProvider
     {
-        private final IntValue configValue;
+        private final IntSupplier configValue;
 
-        public ConfigBasedLightProvider(final IntValue configValue)
+        public ConfigBasedLightProvider(final IntSupplier configValue)
         {
             this.configValue = configValue;
         }
@@ -98,20 +99,20 @@ public interface IFakeLevelLightProvider
         @Override
         public boolean forceOwnLightLevel()
         {
-            final int val = configValue.get();
+            final int val = configValue.getAsInt();
             return 0 <= val && val <= LightEngine.MAX_LEVEL;
         }
 
         @Override
         public int getBlockLight(final BlockPos pos)
         {
-            return configValue.get();
+            return configValue.getAsInt();
         }
 
         @Override
         public int getSkyDarken()
         {
-            return configValue.get();
+            return configValue.getAsInt();
         }
     }
 }
