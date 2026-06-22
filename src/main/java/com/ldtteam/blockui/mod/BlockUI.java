@@ -1,25 +1,18 @@
 package com.ldtteam.blockui.mod;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.javafmlmod.FMLModContainer;
-import net.neoforged.neoforge.common.NeoForge;
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Mod(BlockUI.MOD_ID)
-public class BlockUI
+public class BlockUI implements ModInitializer
 {
     public static final String MOD_ID = "blockui";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    public BlockUI(final FMLModContainer modContainer, final Dist dist)
+    @Override
+    public void onInitialize()
     {
-        final IEventBus modBus = modContainer.getEventBus();
-        final IEventBus forgeBus = NeoForge.EVENT_BUS;
-
-        if (dist.isClient())
-        {
-            modBus.register(ClientLifecycleSubscriber.class);
-            forgeBus.register(ClientEventSubscriber.class);
-        }
+        // Server-safe initialization (network + config framework stubs).
+        // Filled in by later Fabric port tasks.
     }
 }

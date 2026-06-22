@@ -1,1 +1,110 @@
-apply from: 'https://raw.githubusercontent.com/ldtteam/OperaPublicaCreator/ng7/gradle/mod.gradle'
+plugins {
+    id 'fabric-loom' version '1.9-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = project.modVersion
+group = project.modGroup
+
+base {
+    archivesName = project.modId
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name = 'ParchmentMC'
+        url = 'https://maven.parchmentmc.org'
+    }
+    maven {
+        name = 'Shedaniel'
+        url = 'https://maven.shedaniel.me/'
+    }
+    maven {
+        name = 'CurseMaven'
+        url = 'https://www.cursemaven.com'
+        content {
+            includeGroup 'curse.maven'
+        }
+    }
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
+}
+
+loom {
+    accessWidenerPath = file('src/main/resources/blockui.accessWidener')
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.exactMinecraftVersion}"
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${project.parchmentMinecraftVersion}:${project.parchmentMappingsVersion}@zip")
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${project.loaderVersion}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabricVersion}+${project.minecraftVersion}"
+
+    modImplementation(include("me.shedaniel.cloth:cloth-config-fabric:${project.clothConfigVersion}"))
+    modLocalRuntime "maven.modrinth:AANobbMI:mc${project.exactMinecraftVersion}-${project.sodiumVersion}-fabric"
+
+    testImplementation 'junit:junit:4.13.2'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(project.javaVersion as int)
+    }
+
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = project.javaVersion as int
+}
+
+sourceSets {
+    main {
+        java {
+            // Bring-up build: compile only the Fabric entrypoints plus the pure color utilities
+            // needed by IColourTest. All NeoForge-coupled files and their transitive dependents
+            // stay out of compilation until the follow-up port tasks progressively re-enable them.
+            include 'com/ldtteam/blockui/mod/BlockUI.java'
+            include 'com/ldtteam/blockui/mod/BlockUIClient.java'
+            include 'com/ldtteam/blockui/util/color/IColour.java'
+            include 'com/ldtteam/blockui/util/color/ColourARGB.java'
+            include 'com/ldtteam/blockui/util/color/ColourQuartet.java'
+            include 'com/ldtteam/blockui/util/color/ColourRGBA.java'
+        }
+    }
+}
+
+processResources {
+    inputs.property 'version', project.version
+
+    filesMatching('fabric.mod.json') {
+        expand(version: project.version)
+    }
+}
+
+test {
+    useJUnit()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
