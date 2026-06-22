@@ -162,7 +162,8 @@ public class OutOfJarResourceLocation extends ResourceLocation
         return of(getNamespace(), nioPath.resolveSibling(nioPath.getFileName().toString() + suffix));
     }
 
-    @Override
+    // Fabric divergence: vanilla ResourceLocation does not expose compareNamespaced (NeoForge-added).
+    // Inlined the equivalent namespace-first, then-path comparison.
     public int compareNamespaced(final ResourceLocation o)
     {
         if (o instanceof final OutOfJarResourceLocation nioResLoc)
@@ -170,7 +171,8 @@ public class OutOfJarResourceLocation extends ResourceLocation
             final int ret = this.getNamespace().compareTo(nioResLoc.getNamespace());
             return ret != 0 ? ret : this.nioPath.compareTo(nioResLoc.nioPath);
         }
-        return super.compareNamespaced(o);
+        final int ret = this.getNamespace().compareTo(o.getNamespace());
+        return ret != 0 ? ret : this.getPath().compareTo(o.getPath());
     }
 
     @Override

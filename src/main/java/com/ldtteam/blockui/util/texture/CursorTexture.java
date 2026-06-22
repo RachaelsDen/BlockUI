@@ -1,7 +1,6 @@
 package com.ldtteam.blockui.util.texture;
 
 import com.google.gson.JsonObject;
-import com.ldtteam.blockui.Pane;
 import com.ldtteam.blockui.mod.BlockUI;
 import com.ldtteam.blockui.util.cursor.Cursor;
 import com.ldtteam.blockui.util.cursor.CursorUtils;

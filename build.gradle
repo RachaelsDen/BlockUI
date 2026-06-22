@@ -100,6 +100,15 @@ sourceSets {
             include 'com/ldtteam/common/network/IServerboundDistributor.java'
             include 'com/ldtteam/common/network/PlayMessageContext.java'
             include 'com/ldtteam/common/network/PlayMessageType.java'
+            // T14: out-of-jar textures + cursors
+            include 'com/ldtteam/blockui/util/resloc/OutOfJarResourceLocation.java'
+            include 'com/ldtteam/blockui/util/texture/OutOfJarTexture.java'
+            include 'com/ldtteam/blockui/util/texture/SpriteTexture.java'
+            include 'com/ldtteam/blockui/util/texture/IsOurTexture.java'
+            include 'com/ldtteam/blockui/util/texture/MissingCursorTexture.java'
+            include 'com/ldtteam/blockui/util/texture/CursorTexture.java'
+            include 'com/ldtteam/blockui/util/cursor/CursorUtils.java'
+            include 'com/ldtteam/blockui/util/cursor/Cursor.java'
         }
     }
 }
