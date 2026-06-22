@@ -1,5 +1,7 @@
 package com.ldtteam.blockui;
 
+import com.ldtteam.blockui.mod.BlockUI;
+import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiSpriteManager;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
@@ -10,7 +12,10 @@ import net.minecraft.client.resources.TextureAtlasHolder;
 import net.minecraft.client.resources.metadata.gui.GuiMetadataSection;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.PreparableReloadListener.PreparationBarrier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,18 +24,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 /**
  * Splits global vanilla gui atlas on per mod-id basis. Requires atlas definition in atlases/<mod_id>_gui.json. "directory" sources in
  * the atlas definition must have unique path (ideally contain mod_id) because they join across all mod ids (blame mojang).
  */
-public class AtlasManager
+public class AtlasManager implements IdentifiableResourceReloadListener
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(AtlasManager.class);
     public static final AtlasManager INSTANCE = new AtlasManager();
 
     private final Map<String, CustomGuiSpriteManager> modAtlases = new HashMap<>();
+    private CustomGuiSpriteManager blockUiAtlas;
 
     private AtlasManager()
     {}
@@ -46,6 +54,42 @@ public class AtlasManager
             resourceRegistry.accept(spriteManager);
             return spriteManager;
         });
+    }
+
+    @Override
+    public ResourceLocation getFabricId()
+    {
+        return ResourceLocation.fromNamespaceAndPath("blockui", "gui_atlas");
+    }
+
+    @Override
+    public CompletableFuture<Void> reload(
+        final PreparationBarrier preparationBarrier,
+        final ResourceManager resourceManager,
+        final ProfilerFiller preparationsProfiler,
+        final ProfilerFiller reloadProfiler,
+        final Executor backgroundExecutor,
+        final Executor gameExecutor)
+    {
+        if (blockUiAtlas == null)
+        {
+            blockUiAtlas = new CustomGuiSpriteManager(Minecraft.getInstance().getTextureManager(), BlockUI.MOD_ID);
+            modAtlases.put(BlockUI.MOD_ID, blockUiAtlas);
+        }
+
+        return blockUiAtlas.reload(
+            preparationBarrier,
+            resourceManager,
+            preparationsProfiler,
+            reloadProfiler,
+            backgroundExecutor,
+            gameExecutor);
+    }
+
+    @Override
+    public String getName()
+    {
+        return "BlockUI GUI Atlas";
     }
 
     /**

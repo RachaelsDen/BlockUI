@@ -1,5 +1,6 @@
 package com.ldtteam.blockui.mod;
 
+import com.ldtteam.blockui.AtlasManager;
 import com.ldtteam.blockui.Loader;
 import com.ldtteam.blockui.mod.container.ContainerHook;
 import net.fabricmc.api.ClientModInitializer;
@@ -21,6 +22,8 @@ public class BlockUIClient implements ClientModInitializer
     @Override
     public void onInitializeClient()
     {
+        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(AtlasManager.INSTANCE);
+
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new IdentifiableResourceReloadListener()
         {
             @Override
