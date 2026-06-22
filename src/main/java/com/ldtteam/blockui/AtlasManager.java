@@ -11,7 +11,6 @@ import net.minecraft.client.resources.metadata.gui.GuiMetadataSection;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +36,7 @@ public class AtlasManager
     {}
 
     /**
-     * @param resourceRegistry lambda {@link RegisterClientReloadListenersEvent#registerReloadListener(PreparableReloadListener)}
+     * @param resourceRegistry reload listener registrar
      * @param modId owning mod id
      */
     public void addAtlas(final Consumer<PreparableReloadListener> resourceRegistry, final String modId)

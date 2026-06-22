@@ -3,8 +3,8 @@ package com.ldtteam.blockui.controls;
 import com.ldtteam.blockui.BOGuiGraphics;
 import com.ldtteam.blockui.PaneParams;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.client.renderer.item.ClampedItemPropertyFunction;
 import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.client.renderer.item.ItemPropertyFunction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -33,9 +33,9 @@ public class ItemIconWithProperties extends ItemIcon
 
     public static final String PARAM_PROPERTIES = "properties";
 
-    protected final Map<ResourceLocation, ItemPropertyFunction> genericPropertyOverrides = new HashMap<>();
-    protected final Map<Item, Map<ResourceLocation, ItemPropertyFunction>> itemPropertyOverrides = new HashMap<>();
-    private Map<ResourceLocation, ItemPropertyFunction> currentItemOverrides = Collections.emptyMap();
+    protected final Map<ResourceLocation, ClampedItemPropertyFunction> genericPropertyOverrides = new HashMap<>();
+    protected final Map<Item, Map<ResourceLocation, ClampedItemPropertyFunction>> itemPropertyOverrides = new HashMap<>();
+    private Map<ResourceLocation, ClampedItemPropertyFunction> currentItemOverrides = Collections.emptyMap();
 
     public ItemIconWithProperties()
     {
@@ -83,7 +83,7 @@ public class ItemIconWithProperties extends ItemIcon
     /**
      * Short call for adding itemProperty to current item
      */
-    public void addPropertyForCurrentItem(final ResourceLocation propertyKey, final ItemPropertyFunction property)
+    public void addPropertyForCurrentItem(final ResourceLocation propertyKey, final ClampedItemPropertyFunction property)
     {
         itemPropertyOverrides
             .computeIfAbsent(Objects.requireNonNull(itemStack, "Call #setItem before this method").getItem(), item -> new HashMap<>())
@@ -93,7 +93,7 @@ public class ItemIconWithProperties extends ItemIcon
     /**
      * @return modifiable all item-based overrides
      */
-    public Map<Item, Map<ResourceLocation, ItemPropertyFunction>> getItemPropertyOverrides()
+    public Map<Item, Map<ResourceLocation, ClampedItemPropertyFunction>> getItemPropertyOverrides()
     {
         return itemPropertyOverrides;
     }
@@ -101,7 +101,7 @@ public class ItemIconWithProperties extends ItemIcon
     /**
      * @return modifiable generic overrides
      */
-    public Map<ResourceLocation, ItemPropertyFunction> getGenericPropertyOverrides()
+    public Map<ResourceLocation, ClampedItemPropertyFunction> getGenericPropertyOverrides()
     {
         return genericPropertyOverrides;
     }
@@ -121,18 +121,20 @@ public class ItemIconWithProperties extends ItemIcon
         final Item item = itemStack.getItem();
 
         // generic
-        final Map<ResourceLocation, ItemPropertyFunction> oldGenericVals =
+        final Map<ResourceLocation, ClampedItemPropertyFunction> oldGenericVals =
             genericPropertyOverrides.isEmpty() ? Collections.emptyMap() : new HashMap<>();
         genericPropertyOverrides.forEach((key, val) -> {
-            oldGenericVals.put(key, ItemProperties.getProperty(itemStack, key));
+            final var oldValue = ItemProperties.getProperty(itemStack, key);
+            oldGenericVals.put(key, oldValue == null ? (stack, level, entity, seed) -> 0.0F : oldValue::call);
             ItemProperties.registerGeneric(key, val);
         });
 
         // item
-        final Map<ResourceLocation, ItemPropertyFunction> oldItemVals =
+        final Map<ResourceLocation, ClampedItemPropertyFunction> oldItemVals =
             currentItemOverrides.isEmpty() ? Collections.emptyMap() : new HashMap<>();
         currentItemOverrides.forEach((key, val) -> {
-            oldItemVals.put(key, ItemProperties.getProperty(itemStack, key));
+            final var oldValue = ItemProperties.getProperty(itemStack, key);
+            oldItemVals.put(key, oldValue == null ? (stack, level, entity, seed) -> 0.0F : oldValue::call);
             ItemProperties.register(item, key, val);
         });
 

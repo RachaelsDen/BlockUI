@@ -14,8 +14,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.ClientHooks;
-import net.neoforged.neoforge.client.NeoForgeRenderTypes;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Objects;
@@ -25,6 +23,8 @@ import java.util.Objects;
  */
 public class BOScreen extends Screen
 {
+    private static final float FABRIC_GUI_FAR_PLANE = 1000.0F;
+
     protected double renderScale = 1.0d;
     protected double mcScale = 1.0d;
     protected BOWindow window;
@@ -36,6 +36,7 @@ public class BOScreen extends Screen
     protected int framebufferHeight;
     protected int absoluteMouseX;
     protected int absoluteMouseY;
+    protected Screen previousScreen;
 
     /**
      * Create a GuiScreen from a BlockOut window.
@@ -46,6 +47,16 @@ public class BOScreen extends Screen
     {
         super(Component.literal("Blockout GUI"));
         window = w;
+    }
+
+    public void setPreviousScreen(final Screen previousScreen)
+    {
+        this.previousScreen = previousScreen;
+    }
+
+    public Screen getPreviousScreen()
+    {
+        return previousScreen;
     }
 
     @Override
@@ -63,8 +74,7 @@ public class BOScreen extends Screen
         final int guiWidth = Math.max(framebufferWidth, 320);
         final int guiHeight = Math.max(framebufferHeight, 240);
 
-        final boolean oldFilteringValue = NeoForgeRenderTypes.enableTextTextureLinearFiltering;
-        NeoForgeRenderTypes.enableTextTextureLinearFiltering = false;
+        // TODO: T13 — refine for visual parity once Fabric text filtering is revisited.
 
         mcScale = ms.minecraft.getWindow().getGuiScale();
         renderScale = window.getRenderType().calcRenderScale(ms.minecraft.getWindow(), window);
@@ -84,11 +94,12 @@ public class BOScreen extends Screen
         final Matrix4fStack shaderPs = RenderSystem.getModelViewStack();
         final Matrix4f oldProjection = RenderSystem.getProjectionMatrix();
         RenderSystem.setProjectionMatrix(
-            new Matrix4f().setOrtho(0.0F, framebufferWidth, framebufferHeight, 0.0F, 1000.0F, ClientHooks.getGuiFarPlane()),
+            new Matrix4f().setOrtho(0.0F, framebufferWidth, framebufferHeight, 0.0F, 1000.0F, FABRIC_GUI_FAR_PLANE),
             VertexSorting.ORTHOGRAPHIC_Z);
         shaderPs.pushMatrix();
         shaderPs.identity();
-        shaderPs.translate(0.0f, 0.0f, 10000f - net.neoforged.neoforge.client.ClientHooks.getGuiFarPlane());
+        // TODO: T13 — refine for visual parity if Fabric needs a different GUI far plane translation.
+        shaderPs.translate(0.0f, 0.0f, 10000f - FABRIC_GUI_FAR_PLANE);
         RenderSystem.applyModelViewMatrix();
 
         final PoseStack newMs = new PoseStack();
@@ -139,7 +150,6 @@ public class BOScreen extends Screen
             RenderSystem.setProjectionMatrix(oldProjection, VertexSorting.ORTHOGRAPHIC_Z);
             RenderSystem.applyModelViewMatrix();
 
-            NeoForgeRenderTypes.enableTextTextureLinearFiltering = oldFilteringValue;
         }
     }
 

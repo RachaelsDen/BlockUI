@@ -1,8 +1,10 @@
 package com.ldtteam.blockui.util;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ColorResolver;
@@ -13,16 +15,35 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Small single blockstate level wrapper
  */
 public class SingleBlockGetter implements BlockGetter
 {
+    private static MinecraftServer currentServer;
+    private static boolean lifecycleHooksRegistered;
+
     public BlockState blockState = null;
     public BlockEntity blockEntity = null;
+
+    public static void initServerLifecycleHooks()
+    {
+        if (lifecycleHooksRegistered)
+        {
+            return;
+        }
+
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> currentServer = server);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            if (currentServer == server)
+            {
+                currentServer = null;
+            }
+        });
+        lifecycleHooksRegistered = true;
+    }
 
     public SingleBlockGetter(final BlockState blockState, final BlockEntity blockEntity)
     {
@@ -106,7 +127,13 @@ public class SingleBlockGetter implements BlockGetter
         @Override
         public int getBlockTint(final BlockPos pos, final ColorResolver colorResolver)
         {
-            return colorResolver.getColor(ServerLifecycleHooks.getCurrentServer().registryAccess().registryOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS), pos.getX(), pos.getZ());
+            final MinecraftServer server = currentServer;
+            if (server == null)
+            {
+                return 0x638fe9;
+            }
+
+            return colorResolver.getColor(server.registryAccess().registryOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS), pos.getX(), pos.getZ());
         }
 
         @Override

@@ -46,7 +46,7 @@ public class Configurations<CLIENT extends AbstractConfiguration,
      * @param modContainer from event
      */
     public Configurations(final ModContainer modContainer,
-        final IEventBus modBus,
+        final ConfigEventSink modBus,
         final Function<Builder, CLIENT> clientFactory,
         final Function<Builder, SERVER> serverFactory,
         final Function<Builder, COMMON> commonFactory)

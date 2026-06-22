@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-interface IEventBus
+interface ConfigEventSink
 {
     default <T> void addListener(final Class<T> type, final Consumer<T> listener)
     {

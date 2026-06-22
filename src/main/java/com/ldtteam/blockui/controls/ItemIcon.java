@@ -19,12 +19,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.AirBlock;
-import net.neoforged.neoforge.common.CreativeModeTabRegistry;
 import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 import java.util.List;
@@ -274,7 +274,7 @@ public class ItemIcon extends Pane
             // add creative tabs
             int i = nameOffset + 1;
             final ItemStack defaultStack = itemStack.getItem().getDefaultInstance();
-            for (final CreativeModeTab tab : CreativeModeTabRegistry.getSortedCreativeModeTabs())
+            for (final CreativeModeTab tab : CreativeModeTabs.allTabs())
             {
                 if (tab.contains(defaultStack))
                 {

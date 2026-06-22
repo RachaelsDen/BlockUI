@@ -1,7 +1,6 @@
 package com.ldtteam.blockui.util.color;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormatElement;
 
 /**
  * Wrapper for having default color for vertex consumer
@@ -64,13 +63,6 @@ public class ColouredVertexConsumer implements VertexConsumer
     public ColouredVertexConsumer setNormal(final float x, final float y, final float z)
     {
         parent.setNormal(x, y, z);
-        return this;
-    }
-
-    @Override
-    public ColouredVertexConsumer misc(final VertexFormatElement element, final int... values)
-    {
-        parent.misc(element, values);
         return this;
     }
 }

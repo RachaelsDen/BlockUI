@@ -22,8 +22,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.client.ClientHooks;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 
@@ -42,14 +40,6 @@ public class BOGuiGraphics extends GuiGraphics
 
     private Font getFont(@Nullable final ItemStack itemStack)
     {
-        if (itemStack != null)
-        {
-            final Font font = IClientItemExtensions.of(itemStack).getFont(itemStack, IClientItemExtensions.FontContext.ITEM_COUNT);
-            if (font != null)
-            {
-                return font;
-            }
-        }
         return minecraft.font;
     }
 
@@ -70,7 +60,7 @@ public class BOGuiGraphics extends GuiGraphics
 
     public int drawString(final String text, final float x, final float y, final int color, final boolean shadow)
     {
-        return super.drawString(minecraft.font, text, x, y, color, shadow);
+        return super.drawString(minecraft.font, text, Math.round(x), Math.round(y), color, shadow);
     }
 
     public void setCursor(final Cursor cursor)
@@ -116,7 +106,8 @@ public class BOGuiGraphics extends GuiGraphics
         pose().last().normal().identity(); // reset normals cuz lighting
         pose().translate(8, 8, 150);
         pose().scale(16.0F, -16.0F, 16.0F);
-        ClientHooks.handleCameraTransforms(pose(), itemModel, ItemDisplayContext.GUI, false);
+        // TODO: T13 — refine for visual parity if Fabric item GUI transforms need additional handling.
+        itemModel.getTransforms().getTransform(ItemDisplayContext.GUI).apply(false, pose());
 
         if (data.modelNeedsRotationFix())
         {
@@ -132,7 +123,8 @@ public class BOGuiGraphics extends GuiGraphics
 
         final int light = LightTexture.pack(15, 15);
         minecraft.getBlockRenderer()
-            .renderSingleBlock(data.blockState(), pose(), bufferSource(), light, OverlayTexture.NO_OVERLAY, data.modelData(), null);
+            // TODO: T13 — refine for visual parity for blocks that relied on NeoForge ModelData.
+            .renderSingleBlock(data.blockState(), pose(), bufferSource(), light, OverlayTexture.NO_OVERLAY);
         if (data.blockEntity() != null)
         {
             try

@@ -76,39 +76,9 @@ tasks.withType(JavaCompile).configureEach {
 sourceSets {
     main {
         java {
-            // Bring-up build: compile only the Fabric entrypoints plus the pure color utilities
-            // needed by IColourTest. All NeoForge-coupled files and their transitive dependents
-            // stay out of compilation until the follow-up port tasks progressively re-enable them.
-            include 'com/ldtteam/blockui/mod/BlockUI.java'
-            include 'com/ldtteam/blockui/mod/BlockUIClient.java'
-            include 'com/ldtteam/blockui/mod/ClientLifecycleSubscriber.java'
-            include 'com/ldtteam/blockui/mod/ClientEventSubscriber.java'
-            include 'com/ldtteam/blockui/util/color/IColour.java'
-            include 'com/ldtteam/blockui/util/color/ColourARGB.java'
-            include 'com/ldtteam/blockui/util/color/ColourQuartet.java'
-            include 'com/ldtteam/blockui/util/color/ColourRGBA.java'
-            include 'com/ldtteam/common/platform/EnvUtil.java'
-            include 'com/ldtteam/common/config/AbstractConfiguration.java'
-            include 'com/ldtteam/common/config/ConfigBackend.java'
-            include 'com/ldtteam/common/config/Configurations.java'
-            include 'com/ldtteam/common/config/ClientConfigHelper.java'
-            include 'com/ldtteam/common/network/AbstractPlayMessage.java'
-            include 'com/ldtteam/common/network/AbstractClientPlayMessage.java'
-            include 'com/ldtteam/common/network/AbstractServerPlayMessage.java'
-            include 'com/ldtteam/common/network/AbstractUnsidedPlayMessage.java'
-            include 'com/ldtteam/common/network/IClientboundDistributor.java'
-            include 'com/ldtteam/common/network/IServerboundDistributor.java'
-            include 'com/ldtteam/common/network/PlayMessageContext.java'
-            include 'com/ldtteam/common/network/PlayMessageType.java'
-            // T14: out-of-jar textures + cursors
-            include 'com/ldtteam/blockui/util/resloc/OutOfJarResourceLocation.java'
-            include 'com/ldtteam/blockui/util/texture/OutOfJarTexture.java'
-            include 'com/ldtteam/blockui/util/texture/SpriteTexture.java'
-            include 'com/ldtteam/blockui/util/texture/IsOurTexture.java'
-            include 'com/ldtteam/blockui/util/texture/MissingCursorTexture.java'
-            include 'com/ldtteam/blockui/util/texture/CursorTexture.java'
-            include 'com/ldtteam/blockui/util/cursor/CursorUtils.java'
-            include 'com/ldtteam/blockui/util/cursor/Cursor.java'
+            // Blacklist mode: exclude only files with hard NeoForge dependencies
+            // that require their dedicated follow-up port tasks.
+            exclude 'com/ldtteam/common/fakelevel/**'
         }
     }
 }

@@ -15,7 +15,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
-import net.neoforged.neoforge.client.NeoForgeRenderTypes;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -319,8 +318,10 @@ public abstract class AbstractTextElement extends Pane
         temp.add(1, 1, 0, 0); // viewport, discard non (x,y)
         temp.mul(fbW / 2.0f, fbH / 2.0f, 0, 0);
 
+        // TODO: T13 — refine for visual parity if Fabric needs explicit text filtering control.
         final float scale = temp.distanceSquared(FILTERING_THRESHOLD, fbH - FILTERING_THRESHOLD, 0, 0);
-        NeoForgeRenderTypes.enableTextTextureLinearFiltering = Math.abs(temp.x - fbH + temp.y) > FILTERING_THRESHOLD || scale < FILTERING_MAX_SCALE * FILTERING_MAX_SCALE;
+        final boolean shouldUseLinearFiltering = Math.abs(temp.x - fbH + temp.y) > FILTERING_THRESHOLD
+            || scale < FILTERING_MAX_SCALE * FILTERING_MAX_SCALE;
 
         final MultiBufferSource.BufferSource drawBuffer = target.bufferSource();
         int lineShift = 0;
@@ -365,7 +366,10 @@ public abstract class AbstractTextElement extends Pane
         }
         drawBuffer.endBatch();
 
-        NeoForgeRenderTypes.enableTextTextureLinearFiltering = false;
+        if (shouldUseLinearFiltering)
+        {
+            // Fabric has no equivalent runtime GUI text filtering toggle here.
+        }
         RenderSystem.disableBlend();
 
         ms.popPose();
