@@ -19,11 +19,6 @@ import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.ReloadableResourceManager;
-import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
-import net.minecraft.util.Unit;
-import net.minecraft.util.profiling.ProfilerFiller;
 import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
@@ -48,8 +43,6 @@ public final class ClientEventSubscriber
         ClientTickEvents.START_CLIENT_TICK.register(ClientEventSubscriber::onClientTickStart);
         ClientTickEvents.END_CLIENT_TICK.register(ClientEventSubscriber::onClientTickEnd);
 
-        final ReloadableResourceManager resourceManager = (ReloadableResourceManager) Minecraft.getInstance().getResourceManager();
-        resourceManager.registerReloadListener(new ContainerTagReloadListener());
         ContainerHook.init();
 
         registered = true;
@@ -165,18 +158,4 @@ public final class ClientEventSubscriber
         return button;
     }
 
-    private static final class ContainerTagReloadListener extends SimplePreparableReloadListener<Unit>
-    {
-        @Override
-        protected Unit prepare(final ResourceManager resourceManager, final ProfilerFiller profiler)
-        {
-            return Unit.INSTANCE;
-        }
-
-        @Override
-        protected void apply(final Unit prepared, final ResourceManager resourceManager, final ProfilerFiller profiler)
-        {
-            ContainerHook.init();
-        }
-    }
 }

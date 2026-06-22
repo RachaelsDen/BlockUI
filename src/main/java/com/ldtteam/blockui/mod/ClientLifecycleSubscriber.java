@@ -1,7 +1,6 @@
 package com.ldtteam.blockui.mod;
 
 import com.ldtteam.blockui.AtlasManager;
-import com.ldtteam.blockui.Loader;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BiomeColors;
@@ -25,7 +24,6 @@ public final class ClientLifecycleSubscriber
         }
 
         final ReloadableResourceManager resourceManager = (ReloadableResourceManager) Minecraft.getInstance().getResourceManager();
-        resourceManager.registerReloadListener(Loader.INSTANCE);
         AtlasManager.INSTANCE.addAtlas(resourceManager::registerReloadListener, BlockUI.MOD_ID);
 
         ColorProviderRegistry.BLOCK.register(
