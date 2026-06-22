@@ -1,18 +1,11 @@
 package com.ldtteam.common.config;
 
+import com.ldtteam.common.config.AbstractConfiguration.Builder;
+import com.ldtteam.common.config.AbstractConfiguration.ConfigValue;
 import com.ldtteam.common.config.AbstractConfiguration.ConfigWatcher;
+import com.ldtteam.common.config.AbstractConfiguration.ValueSpec;
 import com.ldtteam.common.platform.EnvUtil;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.config.ConfigTracker;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.ModConfigSpec.Builder;
-import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
-import net.neoforged.neoforge.common.ModConfigSpec.ValueSpec;
-import org.apache.commons.lang3.tuple.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +37,8 @@ public class Configurations<CLIENT extends AbstractConfiguration,
     private final COMMON commonConfig;
 
     private final AbstractConfiguration[] activeConfigs;
+    private final List<ConfigBackend> activeBackends = new ArrayList<>();
+    private final String modId;
 
     /**
      * Builds configuration tree.
@@ -56,52 +51,53 @@ public class Configurations<CLIENT extends AbstractConfiguration,
         final Function<Builder, SERVER> serverFactory,
         final Function<Builder, COMMON> commonFactory)
     {
+        modId = modContainer == null ? "blockui" : modContainer.getModId();
+
         final List<AbstractConfiguration> configs = new ArrayList<>();
 
-        final Pair<CLIENT, ModConfig> cli = createConfig(clientFactory, Type.CLIENT, modContainer, configs);
+        final SimplePair<CLIENT, ModConfig> cli = createConfig(clientFactory, ModConfig.Type.CLIENT, configs);
         client = cli.getRight();
         clientConfig = cli.getLeft();
 
-        final Pair<SERVER, ModConfig> ser = createConfig(serverFactory, Type.SERVER, modContainer, configs);
+        final SimplePair<SERVER, ModConfig> ser = createConfig(serverFactory, ModConfig.Type.SERVER, configs);
         server = ser.getRight();
         serverConfig = ser.getLeft();
 
-        final Pair<COMMON, ModConfig> com = createConfig(commonFactory, Type.COMMON, modContainer, configs);
+        final SimplePair<COMMON, ModConfig> com = createConfig(commonFactory, ModConfig.Type.COMMON, configs);
         common = com.getRight();
         commonConfig = com.getLeft();
 
         activeConfigs = configs.toArray(AbstractConfiguration[]::new);
+        activeConfigs(activeConfigs).forEach(config -> config.watchers.forEach(ConfigWatcher::cacheLastValue));
 
-        // register events for watchers
-        modBus.addListener(ModConfigEvent.Loading.class, event -> onConfigLoad(event.getConfig()));
-        modBus.addListener(ModConfigEvent.Reloading.class, event -> onConfigReload(event.getConfig()));
+        modBus.addListener(ModConfig.class, this::reload);
 
         if (EnvUtil.isClient())
         {
+            ClientConfigHelper.register(this);
             ClientConfigHelper.registerClient(modContainer);
         }
     }
 
-    private <T extends AbstractConfiguration> Pair<T, ModConfig> createConfig(final Function<Builder, T> factory,
-        final Type type,
-        final ModContainer modContainer,
+    private <T extends AbstractConfiguration> SimplePair<T, ModConfig> createConfig(final Function<Builder, T> factory,
+        final ModConfig.Type type,
         final List<AbstractConfiguration> configs)
     {
-        // dont create client classes on server to avoid class loading issues
-        if (factory == null || (type == Type.CLIENT && !EnvUtil.isClient()))
+        if (factory == null || (type == ModConfig.Type.CLIENT && !EnvUtil.isClient()))
         {
-            return Pair.of(null, null);
+            return new SimplePair<>(null, null);
         }
 
-        final Pair<T, ModConfigSpec> builtConfig = new ModConfigSpec.Builder().configure(factory);
-        // modContainer.registerConfig(type, builtConfig.getRight());
-        // TODO: replace in the future with the return of registerConfig above
-        final ModConfig modConfig = ConfigTracker.INSTANCE.registerConfig(type, builtConfig.getRight(), modContainer);
-        final T config = builtConfig.getLeft();
-
+        final Builder builder = new Builder();
+        final T config = factory.apply(builder);
+        final ConfigBackend backend = new ConfigBackend(modId, type, builder.values());
+        config.bind(backend);
+        backend.load();
+        backend.save();
+        activeBackends.add(backend);
         configs.add(config);
 
-        return Pair.of(config, modConfig);
+        return new SimplePair<>(config, new ModConfig(type, backend));
     }
 
     public CLIENT getClient()
@@ -119,42 +115,25 @@ public class Configurations<CLIENT extends AbstractConfiguration,
         return commonConfig;
     }
 
-    /**
-     * cache starting values for watchers
-     */
-    private void onConfigLoad(final ModConfig modConfig)
+    List<AbstractConfiguration> activeConfigs()
     {
-        if (client != null && modConfig.getSpec() == client.getSpec())
-        {
-            clientConfig.watchers.forEach(ConfigWatcher::cacheLastValue);
-        }
-        else if (server != null && modConfig.getSpec() == server.getSpec())
-        {
-            serverConfig.watchers.forEach(ConfigWatcher::cacheLastValue);
-        }
-        else if (common != null && modConfig.getSpec() == common.getSpec())
-        {
-            commonConfig.watchers.forEach(ConfigWatcher::cacheLastValue);
-        }
+        return activeConfigs(activeConfigs);
     }
 
-    /**
-     * iterate watchers and fire changes if needed
-     */
-    private void onConfigReload(final ModConfig modConfig)
+    String getModId()
     {
-        if (client != null && modConfig.getSpec() == client.getSpec())
-        {
-            clientConfig.watchers.forEach(ConfigWatcher::compareAndFireChangeEvent);
-        }
-        else if (server != null && modConfig.getSpec() == server.getSpec())
-        {
-            serverConfig.watchers.forEach(ConfigWatcher::compareAndFireChangeEvent);
-        }
-        else if (common != null && modConfig.getSpec() == common.getSpec())
-        {
-            commonConfig.watchers.forEach(ConfigWatcher::compareAndFireChangeEvent);
-        }
+        return modId;
+    }
+
+    void saveAll()
+    {
+        activeBackends.forEach(ConfigBackend::save);
+    }
+
+    void reloadAll()
+    {
+        activeBackends.forEach(ConfigBackend::reloadIfChanged);
+        activeConfigs(activeConfigs).forEach(config -> config.watchers.forEach(ConfigWatcher::compareAndFireChangeEvent));
     }
 
     /**
@@ -195,5 +174,23 @@ public class Configurations<CLIENT extends AbstractConfiguration,
     public Optional<ValueSpec> getSpecFromValue(final ConfigValue<?> value)
     {
         return Optional.of(value.getSpec());
+    }
+
+    private void reload(final ModConfig ignored)
+    {
+        reloadAll();
+    }
+
+    private static List<AbstractConfiguration> activeConfigs(final AbstractConfiguration[] configs)
+    {
+        final List<AbstractConfiguration> active = new ArrayList<>(configs.length);
+        for (final AbstractConfiguration config : configs)
+        {
+            if (config != null)
+            {
+                active.add(config);
+            }
+        }
+        return active;
     }
 }

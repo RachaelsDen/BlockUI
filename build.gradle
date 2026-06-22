@@ -86,6 +86,10 @@ sourceSets {
             include 'com/ldtteam/blockui/util/color/ColourQuartet.java'
             include 'com/ldtteam/blockui/util/color/ColourRGBA.java'
             include 'com/ldtteam/common/platform/EnvUtil.java'
+            include 'com/ldtteam/common/config/AbstractConfiguration.java'
+            include 'com/ldtteam/common/config/ConfigBackend.java'
+            include 'com/ldtteam/common/config/Configurations.java'
+            include 'com/ldtteam/common/config/ClientConfigHelper.java'
         }
     }
 }
