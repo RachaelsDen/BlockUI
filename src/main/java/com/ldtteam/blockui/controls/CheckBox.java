@@ -2,8 +2,8 @@ package com.ldtteam.blockui.controls;
 
 import com.ldtteam.blockui.BOGuiGraphics;
 import com.ldtteam.blockui.PaneParams;
+import com.ldtteam.common.platform.EnvUtil;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.fml.loading.FMLEnvironment;
 import java.util.Objects;
 
 /**
@@ -68,7 +68,7 @@ public class CheckBox extends ButtonImage
     @Override
     public void postDrawBackground(final BOGuiGraphics target, final double mx, final double my)
     {
-        if (!FMLEnvironment.production)
+        if (!EnvUtil.isProduction())
         {
             Objects.requireNonNull(checkmarkImage, () -> "Missing checkmark source: " + id + " | " + window.getXmlResourceLocation());
         }

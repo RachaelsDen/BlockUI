@@ -3,11 +3,11 @@ package com.ldtteam.blockui;
 import com.ldtteam.blockui.controls.*;
 import com.ldtteam.blockui.mod.Log;
 import com.ldtteam.blockui.views.*;
+import com.ldtteam.common.platform.EnvUtil;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -57,7 +57,7 @@ public final class Loader extends SimplePreparableReloadListener<Map<ResourceLoc
     {
         if (paneParams.hasAttribute(ItemIconWithBlockState.PARAM_NBT))
         {
-            if (!FMLEnvironment.production && paneParams.hasAttribute(ItemIconWithProperties.PARAM_PROPERTIES))
+            if (!EnvUtil.isProduction() && paneParams.hasAttribute(ItemIconWithProperties.PARAM_PROPERTIES))
             {
                 throw new IllegalStateException("Must be one of '%s' or '%s'".formatted(ItemIconWithBlockState.PARAM_NBT, ItemIconWithProperties.PARAM_PROPERTIES));
             }

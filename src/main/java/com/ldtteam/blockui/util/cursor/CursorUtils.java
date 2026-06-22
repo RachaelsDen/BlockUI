@@ -4,13 +4,13 @@ import com.ldtteam.blockui.mod.BlockUI;
 import com.ldtteam.blockui.util.texture.CursorTexture;
 import com.ldtteam.blockui.util.texture.IsOurTexture;
 import com.ldtteam.blockui.util.texture.MissingCursorTexture;
+import com.ldtteam.common.platform.EnvUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +67,7 @@ public class CursorUtils
 
             texManager.register(resLoc, new CursorTexture(resLoc));
 
-            if (!FMLEnvironment.production && texManager.getTexture(resLoc) == MissingTextureAtlasSprite.getTexture() && !resLoc.getNamespace().equals(BlockUI.MOD_ID))
+            if (!EnvUtil.isProduction() && texManager.getTexture(resLoc) == MissingTextureAtlasSprite.getTexture() && !resLoc.getNamespace().equals(BlockUI.MOD_ID))
             {
                 throw new IllegalArgumentException("Missing texture: " + resLoc);
             }

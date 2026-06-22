@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
+import com.ldtteam.common.platform.EnvUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -21,7 +22,6 @@ import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling.Type;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
@@ -786,7 +786,7 @@ public class UiRenderMacros
                 }
             };
         }
-        if (!FMLEnvironment.production)
+        if (!EnvUtil.isProduction())
         {
             throw new UnsupportedOperationException("Missing resolver for gui scaling: " + guiScaling.type());
         }

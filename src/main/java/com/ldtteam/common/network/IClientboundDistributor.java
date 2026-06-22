@@ -1,12 +1,12 @@
 package com.ldtteam.common.network;
 
+import com.ldtteam.common.platform.EnvUtil;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
@@ -72,7 +72,7 @@ public interface IClientboundDistributor extends CustomPacketPayload
 
         final String crash =
             "Got client chunk for server network message: " + this.getClass().getName() + " - " + chunk.getClass().getName();
-        if (FMLEnvironment.production)
+        if (EnvUtil.isProduction())
         {
             new IllegalArgumentException(crash).printStackTrace();
         }

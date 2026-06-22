@@ -1,9 +1,9 @@
 package com.ldtteam.common.config;
 
 import com.ldtteam.common.language.LanguageHandler;
+import com.ldtteam.common.platform.EnvUtil;
 import net.minecraft.server.TickTask;
 import net.neoforged.fml.LogicalSide;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.ModConfigSpec.BooleanValue;
 import net.neoforged.neoforge.common.ModConfigSpec.Builder;
 import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
@@ -281,7 +281,7 @@ public abstract class AbstractConfiguration
 
             if (!Objects.equals(newValue, lastValue))
             {
-                LogicalSidedProvider.WORKQUEUE.get(FMLEnvironment.dist.isClient() ? LogicalSide.CLIENT : LogicalSide.SERVER)
+                LogicalSidedProvider.WORKQUEUE.get(EnvUtil.isClient() ? LogicalSide.CLIENT : LogicalSide.SERVER)
                     .tell(new TickTask(0, () -> listener.onChange(lastValue, newValue)));
                 lastValue = newValue;
             }

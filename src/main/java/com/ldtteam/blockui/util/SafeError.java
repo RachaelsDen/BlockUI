@@ -1,7 +1,7 @@
 package com.ldtteam.blockui.util;
 
 import com.ldtteam.blockui.mod.Log;
-import net.neoforged.fml.loading.FMLEnvironment;
+import com.ldtteam.common.platform.EnvUtil;
 
 /**
  * Utility class for throwing errors which is safe during production.
@@ -15,7 +15,7 @@ public class SafeError
      */
     public static void throwInDev(final RuntimeException exception)
     {
-        if (FMLEnvironment.production)
+        if (EnvUtil.isProduction())
         {
             Log.getLogger().error(exception.getMessage(), exception);
         }

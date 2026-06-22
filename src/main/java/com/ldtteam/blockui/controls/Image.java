@@ -6,6 +6,7 @@ import com.ldtteam.blockui.Pane;
 import com.ldtteam.blockui.PaneParams;
 import com.ldtteam.blockui.Parsers;
 import com.ldtteam.blockui.mod.Log;
+import com.ldtteam.common.platform.EnvUtil;
 import com.ldtteam.blockui.util.records.SizeI;
 import com.ldtteam.blockui.util.resloc.OutOfJarResourceLocation;
 import com.ldtteam.blockui.util.texture.OutOfJarTexture;
@@ -21,7 +22,6 @@ import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Tuple;
-import net.neoforged.fml.loading.FMLEnvironment;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -124,7 +124,7 @@ public class Image extends Pane
             }
         }
 
-        if (!FMLEnvironment.production)
+        if (!EnvUtil.isProduction())
         {
             throw new RuntimeException("Couldn't resolve size for image: " + resourceLocation);
         }
@@ -183,7 +183,7 @@ public class Image extends Pane
     @Override
     public void drawSelf(final BOGuiGraphics target, final double mx, final double my)
     {
-        if (!FMLEnvironment.production)
+        if (!EnvUtil.isProduction())
         {
             Objects.requireNonNull(resourceLocation, () -> "Missing image source: " + id + " | " + window.getXmlResourceLocation());
         }

@@ -2,9 +2,9 @@ package com.ldtteam.common.language;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.ldtteam.common.platform.EnvUtil;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.apache.commons.io.IOUtils;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -92,7 +92,7 @@ public final class LanguageHandler
 
         private void load(final String path)
         {
-            final String locale = FMLEnvironment.dist.isClient() ? ClientLocale.getLocale() : ServerLocale.getLocale();
+            final String locale = EnvUtil.isClient() ? ClientLocale.getLocale() : ServerLocale.getLocale();
 
             InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(String.format(path, locale));
             if (is == null)

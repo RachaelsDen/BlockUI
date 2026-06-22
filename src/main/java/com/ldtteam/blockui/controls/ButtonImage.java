@@ -4,6 +4,7 @@ import com.ldtteam.blockui.Alignment;
 import com.ldtteam.blockui.BOGuiGraphics;
 import com.ldtteam.blockui.PaneParams;
 import com.ldtteam.blockui.Parsers;
+import com.ldtteam.common.platform.EnvUtil;
 import com.ldtteam.blockui.util.texture.ResolvedWidgetSprites;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -11,7 +12,6 @@ import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.util.Objects;
 
@@ -225,7 +225,7 @@ public class ButtonImage extends Button
     @Override
     public void drawSelf(final BOGuiGraphics target, final double mx, final double my)
     {
-        if (!FMLEnvironment.production)
+        if (!EnvUtil.isProduction())
         {
             Objects.requireNonNull(textures.enabled(), () -> id + " | " + window.getXmlResourceLocation());
         }

@@ -1,13 +1,13 @@
 package com.ldtteam.common.config;
 
 import com.ldtteam.common.config.AbstractConfiguration.ConfigWatcher;
+import com.ldtteam.common.platform.EnvUtil;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ConfigTracker;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.config.ModConfig.Type;
 import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.ModConfigSpec.Builder;
 import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
@@ -76,7 +76,7 @@ public class Configurations<CLIENT extends AbstractConfiguration,
         modBus.addListener(ModConfigEvent.Loading.class, event -> onConfigLoad(event.getConfig()));
         modBus.addListener(ModConfigEvent.Reloading.class, event -> onConfigReload(event.getConfig()));
 
-        if (FMLEnvironment.dist.isClient())
+        if (EnvUtil.isClient())
         {
             ClientConfigHelper.registerClient(modContainer);
         }
@@ -88,7 +88,7 @@ public class Configurations<CLIENT extends AbstractConfiguration,
         final List<AbstractConfiguration> configs)
     {
         // dont create client classes on server to avoid class loading issues
-        if (factory == null || (type == Type.CLIENT && !FMLEnvironment.dist.isClient()))
+        if (factory == null || (type == Type.CLIENT && !EnvUtil.isClient()))
         {
             return Pair.of(null, null);
         }

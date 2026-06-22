@@ -1,6 +1,7 @@
 package com.ldtteam.blockui.util.texture;
 
 import com.ldtteam.blockui.mod.BlockUI;
+import com.ldtteam.common.platform.EnvUtil;
 import com.ldtteam.blockui.util.resloc.OutOfJarResourceLocation;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.TextureUtil;
@@ -14,7 +15,6 @@ import net.minecraft.client.resources.metadata.texture.TextureMetadataSection;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.neoforged.fml.loading.FMLEnvironment;
 import java.io.IOException;
 
 /**
@@ -98,7 +98,7 @@ public class OutOfJarTexture extends AbstractTexture
 
         if (current == MissingTextureAtlasSprite.getTexture())
         {
-            if (!FMLEnvironment.production && !resLoc.getNamespace().equals(BlockUI.MOD_ID))
+            if (!EnvUtil.isProduction() && !resLoc.getNamespace().equals(BlockUI.MOD_ID))
             {
                 throw new IllegalArgumentException("Missing texture: " + resLoc);
             }
