@@ -7,9 +7,7 @@ pluginManagement {
         }
         mavenCentral()
     }
-}
 
-gradle.startParameter.setProjectProperties(new HashMap<>(gradle.startParameter.getProjectProperties()))
-gradle.startParameter.getProjectProperties().put("build.start", Long.toString(System.currentTimeMillis()))
+}
 
 rootProject.name = "blockui"

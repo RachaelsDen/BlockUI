@@ -2,7 +2,6 @@
   "required": true,
   "package": "com.ldtteam.blockui.mixin",
   "compatibilityLevel": "JAVA_21",
-  "refmap": "blockui-refmap.json",
   "client": [
     "GuiMixin",
     "MouseHandlerMixin"
