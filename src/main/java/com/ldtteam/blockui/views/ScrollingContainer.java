@@ -153,7 +153,7 @@ public class ScrollingContainer extends View
             parent.accumulatePosition(accumulator);
         }
         accumulator.x += x;
-        accumulator.y += y - scrollY;
+        accumulator.y = (int) (accumulator.y + y - scrollY);
         return accumulator;
     }
 
