@@ -6,14 +6,10 @@ import com.ldtteam.blockui.PaneParams;
 import com.ldtteam.blockui.mod.Log;
 import com.ldtteam.blockui.util.cursor.Cursor;
 import com.ldtteam.blockui.views.View;
-import com.mojang.blaze3d.platform.GlStateManager.LogicOp;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -273,9 +269,9 @@ public class TextField extends Pane
         final int direction = (key == GLFW.GLFW_KEY_LEFT) ? -1 : 1;
 
 
-        if (Screen.hasShiftDown())
+        if (InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LSHIFT))
         {
-            if (Screen.hasControlDown())
+            if (InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL))
             {
                 setSelectionEnd(getNthWordFromPos(direction, getSelectionEnd()));
             }
@@ -284,7 +280,7 @@ public class TextField extends Pane
                 setSelectionEnd(getSelectionEnd() + direction);
             }
         }
-        else if (Screen.hasControlDown())
+        else if (InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL))
         {
             setCursorPosition(getNthWordFromCursor(direction));
         }
@@ -306,7 +302,7 @@ public class TextField extends Pane
     {
         final int position = (key == GLFW.GLFW_KEY_HOME) ? 0 : text.length();
 
-        if (Screen.hasShiftDown())
+        if (InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LSHIFT))
         {
             setSelectionEnd(position);
         }
@@ -321,7 +317,7 @@ public class TextField extends Pane
     {
         final int direction = (key == GLFW.GLFW_KEY_BACKSPACE) ? -1 : 1;
 
-        if (Screen.hasControlDown())
+        if (InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL))
         {
             deleteWords(direction);
         }
@@ -421,21 +417,7 @@ public class TextField extends Pane
                 selectionEndX = x + width;
             }
 
-            final Matrix4f m = target.pose().last().pose();
-            RenderSystem.setShaderColor(0.0F, 0.0F, 1.0F, 1.0F);
-            RenderSystem.enableColorLogicOp();
-            RenderSystem.logicOp(LogicOp.OR_REVERSE);
-            RenderSystem.setShader(GameRenderer::getPositionShader);
-
-            final BufferBuilder vertexBuffer = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION);
-            vertexBuffer.addVertex(m, selectionStartX, drawY - 1, 0.0f);
-            vertexBuffer.addVertex(m, selectionStartX, drawY + 1 + mc.font.lineHeight, 0.0f);
-            vertexBuffer.addVertex(m, selectionEndX, drawY + 1 + mc.font.lineHeight, 0.0f);
-            vertexBuffer.addVertex(m, selectionEndX, drawY - 1, 0.0f);
-            BufferUploader.drawWithShader(vertexBuffer.build());
-
-            RenderSystem.disableColorLogicOp();
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            fill(target.pose(), selectionStartX, drawY - 1, selectionEndX - selectionStartX, 1 + mc.font.lineHeight, RECT_COLOR);
         }
     }
 
@@ -471,24 +453,25 @@ public class TextField extends Pane
     @Override
     public boolean onKeyTyped(final char c, final int key)
     {
-        if (Screen.isCopy(key))
+        final boolean controlDown = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL);
+        if (controlDown && key == GLFW.GLFW_KEY_C)
         {
             mc.keyboardHandler.setClipboard(getSelectedText());
             return true;
         }
-        else if (Screen.isCut(key))
+        else if (controlDown && key == GLFW.GLFW_KEY_X)
         {
             mc.keyboardHandler.setClipboard(getSelectedText());
             writeText("");
             return true;
         }
-        else if (Screen.isSelectAll(key))
+        else if (controlDown && key == GLFW.GLFW_KEY_A)
         {
             setCursorPosition(text.length());
             setSelectionEnd(0);
             return true;
         }
-        else if (Screen.isPaste(key))
+        else if (controlDown && key == GLFW.GLFW_KEY_V)
         {
             writeText(mc.keyboardHandler.getClipboard());
             return true;

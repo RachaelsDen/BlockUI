@@ -5,12 +5,11 @@ import com.ldtteam.blockui.BOScreen;
 import com.ldtteam.blockui.Loader;
 import com.ldtteam.blockui.PaneParams;
 import com.ldtteam.blockui.Parsers;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.ToDoubleBiFunction;
@@ -18,7 +17,6 @@ import java.util.function.ToDoubleBiFunction;
 /**
  * Blockout window, high level root pane.
  */
-@OnlyIn(Dist.CLIENT)
 public class BOWindow extends View
 {
     /**
@@ -51,14 +49,14 @@ public class BOWindow extends View
      */
     protected WindowRenderType windowRenderType = WindowRenderType.OVERSIZED_VANILLA;
 
-    protected ResourceLocation xmlResourceLocation;
+    protected Identifier xmlResourceLocation;
 
     /**
      * Create a window from an xml file.
      *
      * @param resource ResourceLocation to get file from.
      */
-    public BOWindow(final ResourceLocation resource)
+    public BOWindow(final Identifier resource)
     {
         this();
         this.xmlResourceLocation = resource;
@@ -111,7 +109,9 @@ public class BOWindow extends View
     @Override
     public void drawSelf(final BOGuiGraphics ms, final double mx, final double my)
     {
-        debugging = Screen.hasShiftDown() && Screen.hasAltDown() && Screen.hasControlDown();
+        debugging = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LSHIFT)
+            && InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LALT)
+            && InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL);
 
         super.drawSelf(ms, mx, my);
     }
@@ -147,7 +147,7 @@ public class BOWindow extends View
     /**
      * @return xml defining this window
      */
-    public ResourceLocation getXmlResourceLocation()
+    public Identifier getXmlResourceLocation()
     {
         return xmlResourceLocation;
     }
@@ -157,7 +157,7 @@ public class BOWindow extends View
      */
     public void open()
     {
-        mc.submit(() -> mc.setScreen(screen));
+        mc.submit(() -> mc.gui.setScreen(screen));
     }
 
     /**
@@ -165,7 +165,7 @@ public class BOWindow extends View
      */
     public void openAsLayer()
     {
-        mc.submit(() -> mc.pushGuiLayer(screen));
+        mc.submit(() -> mc.gui.setScreen(screen));
     }
 
     /**
@@ -243,7 +243,7 @@ public class BOWindow extends View
      */
     public void close()
     {
-        Minecraft.getInstance().popGuiLayer();
+        Minecraft.getInstance().gui.setScreen(null);
     }
 
     /**

@@ -9,7 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLEnvironment;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -32,10 +32,10 @@ public class CursorUtils
      * @return    cursor texture reference
      * @see #loadCursorTexture(ResourceLocation)
      */
-    public static CursorTexture setCursorImage(final ResourceLocation rl)
+    public static CursorTexture setCursorImage(final Identifier rl)
     {
         AbstractTexture texture = Minecraft.getInstance().getTextureManager().getTexture(rl);
-        if (texture == MissingTextureAtlasSprite.getTexture())
+        if (rl.equals(MissingTextureAtlasSprite.getLocation()))
         {
             texture = MissingCursorTexture.INSTANCE;
         }
@@ -54,10 +54,10 @@ public class CursorUtils
      *
      * @param resLoc cursor file location
      */
-    public static void loadCursorTexture(final ResourceLocation resLoc)
+    public static void loadCursorTexture(final Identifier resLoc)
     {
         final TextureManager texManager = Minecraft.getInstance().getTextureManager();
-        final AbstractTexture texture = texManager.getTexture(resLoc, null);
+        final AbstractTexture texture = texManager.getTexture(resLoc);
         if (!(texture instanceof CursorTexture))
         {
             if (IsOurTexture.isOur(texture))
@@ -67,7 +67,7 @@ public class CursorUtils
 
             texManager.register(resLoc, new CursorTexture(resLoc));
 
-            if (!FMLEnvironment.production && texManager.getTexture(resLoc) == MissingTextureAtlasSprite.getTexture() && !resLoc.getNamespace().equals(BlockUI.MOD_ID))
+            if (texManager.getTexture(resLoc) == MissingCursorTexture.INSTANCE && !resLoc.getNamespace().equals(BlockUI.MOD_ID))
             {
                 throw new IllegalArgumentException("Missing texture: " + resLoc);
             }
@@ -121,7 +121,7 @@ public class CursorUtils
         RenderSystem.assertOnRenderThread();
         if (cursorAddress != lastCursorAddress)
         {
-            GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().getWindow(), cursorAddress);
+            GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().handle(), cursorAddress);
             lastCursorAddress = cursorAddress;
         }
     }

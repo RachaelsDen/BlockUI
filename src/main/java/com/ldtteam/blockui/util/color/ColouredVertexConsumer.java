@@ -30,6 +30,13 @@ public class ColouredVertexConsumer implements VertexConsumer
         return this;
     }
 
+    @Override
+    public ColouredVertexConsumer setColor(final int color)
+    {
+        parent.setColor(color);
+        return this;
+    }
+
     /**
      * Applies previously set defaultColor, will shamelessly NPE if you forgot to set it
      */
@@ -64,6 +71,13 @@ public class ColouredVertexConsumer implements VertexConsumer
     public ColouredVertexConsumer setNormal(final float x, final float y, final float z)
     {
         parent.setNormal(x, y, z);
+        return this;
+    }
+
+    @Override
+    public ColouredVertexConsumer setLineWidth(final float width)
+    {
+        parent.setLineWidth(width);
         return this;
     }
 

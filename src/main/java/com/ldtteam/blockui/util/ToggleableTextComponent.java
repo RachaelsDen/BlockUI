@@ -20,8 +20,6 @@ public record ToggleableTextComponent(BooleanSupplier condition, MutableComponen
         .group(ComponentSerialization.CODEC.fieldOf("data").forGetter(ToggleableTextComponent::data),
             Codec.BOOL.fieldOf("condition").forGetter(comp -> comp.condition().getAsBoolean()))
         .apply(instance, (data, conditionValue) -> new ToggleableTextComponent(() -> conditionValue, (MutableComponent) data)));
-    public static final ComponentContents.Type<ToggleableTextComponent> TYPE = new ComponentContents.Type<>(CODEC, BlockUI.MOD_ID + "_toggle");
-
     /**
      * @param condition if contidition returns true then data will get rendered
      * @param data what to render when condition returns true
@@ -46,9 +44,9 @@ public record ToggleableTextComponent(BooleanSupplier condition, MutableComponen
     }
 
     @Override
-    public Type<?> type()
+    public MapCodec<? extends ComponentContents> codec()
     {
-        return TYPE;
+        return CODEC;
     }
 
     public record FormattedToggleableCharSequence(BooleanSupplier condition, FormattedCharSequence data) implements FormattedCharSequence

@@ -8,7 +8,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -18,7 +17,7 @@ import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.PlainTextContents.LiteralContents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -84,7 +83,7 @@ public class ItemIconWithBlockState extends ItemIcon
                 try
                 {
                     newItemStack.applyComponents(
-                        DataComponentMap.CODEC.decode(NbtOps.INSTANCE, TagParser.parseTag(nbt)).getOrThrow().getFirst());
+                        DataComponentMap.CODEC.decode(NbtOps.INSTANCE, TagParser.parseCompoundFully(nbt)).getOrThrow().getFirst());
                 }
                 catch (final CommandSyntaxException | IllegalStateException e)
                 {
@@ -150,8 +149,6 @@ public class ItemIconWithBlockState extends ItemIcon
             target.renderItemDecorations(itemStack, 0, 0);
         }
 
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableBlend();
         ms.popPose();
     }
 
@@ -160,8 +157,8 @@ public class ItemIconWithBlockState extends ItemIcon
     {
         if (blockStateExtension != null)
         {
-            final ResourceLocation key = BuiltInRegistries.BLOCK.getKey(blockStateExtension.blockState().getBlock());
-            final String nameTKey = Util.makeDescriptionId("block", key);
+        final Identifier key = BuiltInRegistries.BLOCK.getKey(blockStateExtension.blockState().getBlock());
+            final String nameTKey = blockStateExtension.blockState().getBlock().getDescriptionId();
             final MutableComponent name = Component.translatable(nameTKey);
             final MutableComponent nameKey = Component.literal(key.toString()).withStyle(ChatFormatting.DARK_GRAY);
 
@@ -176,7 +173,7 @@ public class ItemIconWithBlockState extends ItemIcon
             for (int i = tooltipList.size() - 1; i >= 0; i--)
             {
                 if (tooltipList.get(i).getContents() instanceof final LiteralContents literalContents &&
-                    ResourceLocation.tryParse(literalContents.text()) != null)
+                    Identifier.tryParse(literalContents.text()) != null)
                 {
                     tooltipList.set(i, nameKey);
                     break;
@@ -308,7 +305,7 @@ public class ItemIconWithBlockState extends ItemIcon
         }
 
         // try parsing blockentity
-        final CompoundTag blockEntityTag = itemStack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY).copyTag();
+        final CompoundTag blockEntityTag = ((CustomData) itemStack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY)).copyTag();
         BlockEntity be = null;
         if (!blockEntityTag.isEmpty())
         {

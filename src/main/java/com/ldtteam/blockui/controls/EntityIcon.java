@@ -6,11 +6,10 @@ import com.ldtteam.blockui.PaneParams;
 import com.ldtteam.blockui.controls.AbstractTextBuilder.AutomaticTooltipBuilder;
 import com.ldtteam.blockui.controls.Tooltip.AutomaticTooltip;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +36,7 @@ public class EntityIcon extends Pane
     {
         super(params);
 
-        final ResourceLocation entityName = params.getResource("entity");
+        final Identifier entityName = params.getResource("entity");
         if (entityName != null)
         {
             setEntity(entityName);
@@ -49,9 +48,9 @@ public class EntityIcon extends Pane
         this.headyaw = params.getFloat("head", this.headyaw);
     }
 
-    public void setEntity(@NotNull ResourceLocation entityId)
+    public void setEntity(@NotNull Identifier entityId)
     {
-        final EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(entityId);
+        final EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getValue(entityId);
         if (entityType != null)
         {
             setEntity(entityType);
@@ -64,7 +63,7 @@ public class EntityIcon extends Pane
 
     public void setEntity(@NotNull EntityType<?> type)
     {
-        final Entity entity = type.create(mc.level);
+        final Entity entity = mc.level == null ? null : type.create(mc.level, EntitySpawnReason.COMMAND);
 
         if (entity != null)
         {
@@ -131,18 +130,7 @@ public class EntityIcon extends Pane
                 String s = String.valueOf(this.count);
                 ms.translate(getWidth(), getHeight(), 100.0D);
                 ms.scale(0.75F, 0.75F, 0.75F);
-                MultiBufferSource.BufferSource buffer = target.bufferSource();
-                mc.font.drawInBatch(s,
-                        (float) (-4 - mc.font.width(s)),
-                        (float) (-mc.font.lineHeight),
-                        16777215,
-                        true,
-                        ms.last().pose(),
-                        buffer,
-                        Font.DisplayMode.NORMAL,
-                        0,
-                        15728880);
-                buffer.endBatch();
+                target.drawString(s, -4 - mc.font.width(s), -mc.font.lineHeight, 16777215, true);
             }
 
             ms.popPose();

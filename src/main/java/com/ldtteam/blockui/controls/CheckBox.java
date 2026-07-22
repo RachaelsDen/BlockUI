@@ -2,7 +2,7 @@ package com.ldtteam.blockui.controls;
 
 import com.ldtteam.blockui.BOGuiGraphics;
 import com.ldtteam.blockui.PaneParams;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLEnvironment;
 import java.util.Objects;
 
@@ -14,7 +14,7 @@ public class CheckBox extends ButtonImage
     /**
      * The image for the checkmark to render over the button.
      */
-    protected ResourceLocation checkmarkImage;
+    protected Identifier checkmarkImage;
     protected ResolvedBlit resolvedCheckmarkImage;
 
     /**
@@ -55,12 +55,12 @@ public class CheckBox extends ButtonImage
      *
      * @param loc ResourceLocation for the checkmark.
      */
-    public void setCheckmarkImage(final ResourceLocation loc)
+    public void setCheckmarkImage(final Identifier loc)
     {
         this.checkmarkImage = loc;
     }
 
-    public ResourceLocation getCheckmarkImage()
+    public Identifier getCheckmarkImage()
     {
         return checkmarkImage;
     }
@@ -68,7 +68,7 @@ public class CheckBox extends ButtonImage
     @Override
     public void postDrawBackground(final BOGuiGraphics target, final double mx, final double my)
     {
-        if (!FMLEnvironment.production)
+        if (!FMLEnvironment.isProduction())
         {
             Objects.requireNonNull(checkmarkImage, () -> "Missing checkmark source: " + id + " | " + window.getXmlResourceLocation());
         }

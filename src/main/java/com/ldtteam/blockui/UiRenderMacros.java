@@ -1,29 +1,20 @@
 package com.ldtteam.blockui;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat.Mode;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling.NineSlice;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling.Tile;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling.Type;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Our replacement for GuiComponent.
@@ -31,6 +22,58 @@ import org.joml.Quaternionf;
 public class UiRenderMacros
 {
     public static final double HALF_BIAS = 0.5;
+
+    static int alphaFromArgb(final int argbColor)
+    {
+        return (argbColor >> 24) & 0xff;
+    }
+
+    static int redFromArgb(final int argbColor)
+    {
+        return (argbColor >> 16) & 0xff;
+    }
+
+    static int greenFromArgb(final int argbColor)
+    {
+        return (argbColor >> 8) & 0xff;
+    }
+
+    static int blueFromArgb(final int argbColor)
+    {
+        return argbColor & 0xff;
+    }
+
+    static int argb(final int red, final int green, final int blue, final int alpha)
+    {
+        return (alpha & 0xff) << 24 | (red & 0xff) << 16 | (green & 0xff) << 8 | (blue & 0xff);
+    }
+
+    private static UnsupportedOperationException unsupported26_2(final String method)
+    {
+        return new UnsupportedOperationException(method + " still uses the removed pre-26.2 immediate-mode render pipeline");
+    }
+
+    private static GuiGraphicsExtractor requireActiveExtractor(final String method)
+    {
+        final GuiGraphicsExtractor extractor = BOGuiGraphics.activeExtractor();
+        if (extractor == null)
+        {
+            throw new IllegalStateException(method + " requires an active BOGuiGraphics extractor context");
+        }
+        return extractor;
+    }
+
+    private static RectI transformRect(final PoseStack ps, final int x, final int y, final int w, final int h)
+    {
+        final Matrix4f matrix = ps.last().pose();
+        final Vector3f topLeft = matrix.transformPosition(new Vector3f(x, y, 0));
+        final Vector3f bottomRight = matrix.transformPosition(new Vector3f(x + w, y + h, 0));
+        final int x0 = Math.round(Math.min(topLeft.x, bottomRight.x));
+        final int y0 = Math.round(Math.min(topLeft.y, bottomRight.y));
+        final int x1 = Math.round(Math.max(topLeft.x, bottomRight.x));
+        final int y1 = Math.round(Math.max(topLeft.y, bottomRight.y));
+        return new RectI(x0, y0, x1, y1);
+    }
 
     public static void drawLineRectGradient(final PoseStack ps,
         final int x,
@@ -57,14 +100,14 @@ public class UiRenderMacros
             y,
             w,
             h,
-            (argbColorStart >> 16) & 0xff,
-            (argbColorEnd >> 16) & 0xff,
-            (argbColorStart >> 8) & 0xff,
-            (argbColorEnd >> 8) & 0xff,
-            argbColorStart & 0xff,
-            argbColorEnd & 0xff,
-            (argbColorStart >> 24) & 0xff,
-            (argbColorEnd >> 24) & 0xff,
+            redFromArgb(argbColorStart),
+            redFromArgb(argbColorEnd),
+            greenFromArgb(argbColorStart),
+            greenFromArgb(argbColorEnd),
+            blueFromArgb(argbColorStart),
+            blueFromArgb(argbColorEnd),
+            alphaFromArgb(argbColorStart),
+            alphaFromArgb(argbColorEnd),
             lineWidth);
     }
 
@@ -87,37 +130,22 @@ public class UiRenderMacros
         {
             return;
         }
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("drawLineRectGradient");
+        final RectI top = transformRect(ps, x, y, w, lineWidth);
+        final RectI bottom = transformRect(ps, x, y + h - lineWidth, w, lineWidth);
+        final RectI left = transformRect(ps, x, y + lineWidth, lineWidth, Math.max(0, h - 2 * lineWidth));
+        final RectI right = transformRect(ps, x + w - lineWidth, y + lineWidth, lineWidth, Math.max(0, h - 2 * lineWidth));
 
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        if (alphaStart != 255 || alphaEnd != 255)
+        extractor.fill(top.x0, top.y0, top.x1, top.y1, argb(redStart, greenStart, blueStart, alphaStart));
+        extractor.fill(bottom.x0, bottom.y0, bottom.x1, bottom.y1, argb(redEnd, greenEnd, blueEnd, alphaEnd));
+        if (left.x0 != left.x1 && left.y0 != left.y1)
         {
-            RenderSystem.enableBlend();
+            extractor.fillGradient(left.x0, left.y0, left.x1, left.y1, argb(redStart, greenStart, blueStart, alphaStart), argb(redEnd, greenEnd, blueEnd, alphaEnd));
         }
-        else
+        if (right.x0 != right.x1 && right.y0 != right.y1)
         {
-            RenderSystem.disableBlend();
+            extractor.fillGradient(right.x0, right.y0, right.x1, right.y1, argb(redStart, greenStart, blueStart, alphaStart), argb(redEnd, greenEnd, blueEnd, alphaEnd));
         }
-
-        final Matrix4f m = ps.last().pose();
-        BufferBuilder buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x, y, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        buffer.addVertex(m, x, y + h, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x + lineWidth, y + h - lineWidth, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x + lineWidth, y + lineWidth, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        buffer.addVertex(m, x + w - lineWidth, y + lineWidth, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        buffer.addVertex(m, x + w, y, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        BufferUploader.drawWithShader(buffer.build());
-
-        buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x + w, y + h, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x + w, y, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        buffer.addVertex(m, x + w - lineWidth, y + lineWidth, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        buffer.addVertex(m, x + w - lineWidth, y + h - lineWidth, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x + lineWidth, y + h - lineWidth, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x, y + h, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        BufferUploader.drawWithShader(buffer.build());
-
-        RenderSystem.disableBlend();
     }
 
     public static void drawLineRect(final PoseStack ps, final int x, final int y, final int w, final int h, final int argbColor)
@@ -138,10 +166,10 @@ public class UiRenderMacros
             y,
             w,
             h,
-            (argbColor >> 16) & 0xff,
-            (argbColor >> 8) & 0xff,
-            argbColor & 0xff,
-            (argbColor >> 24) & 0xff,
+            redFromArgb(argbColor),
+            greenFromArgb(argbColor),
+            blueFromArgb(argbColor),
+            alphaFromArgb(argbColor),
             lineWidth);
     }
 
@@ -160,42 +188,28 @@ public class UiRenderMacros
         {
             return;
         }
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("drawLineRect");
+        final int color = argb(red, green, blue, alpha);
+        final RectI top = transformRect(ps, x, y, w, lineWidth);
+        final RectI bottom = transformRect(ps, x, y + h - lineWidth, w, lineWidth);
+        final RectI left = transformRect(ps, x, y + lineWidth, lineWidth, Math.max(0, h - 2 * lineWidth));
+        final RectI right = transformRect(ps, x + w - lineWidth, y + lineWidth, lineWidth, Math.max(0, h - 2 * lineWidth));
 
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        if (alpha != 255)
+        extractor.fill(top.x0, top.y0, top.x1, top.y1, color);
+        extractor.fill(bottom.x0, bottom.y0, bottom.x1, bottom.y1, color);
+        if (left.x0 != left.x1 && left.y0 != left.y1)
         {
-            RenderSystem.enableBlend();
+            extractor.fill(left.x0, left.y0, left.x1, left.y1, color);
         }
-        else
+        if (right.x0 != right.x1 && right.y0 != right.y1)
         {
-            RenderSystem.disableBlend();
+            extractor.fill(right.x0, right.y0, right.x1, right.y1, color);
         }
-
-        final Matrix4f m = ps.last().pose();
-        BufferBuilder buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x, y, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x, y + h, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + lineWidth, y + h - lineWidth, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + lineWidth, y + lineWidth, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w - lineWidth, y + lineWidth, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w, y, 0).setColor(red, green, blue, alpha);
-        BufferUploader.drawWithShader(buffer.build());
-
-        buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x + w, y + h, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w, y, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w - lineWidth, y + lineWidth, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w - lineWidth, y + h - lineWidth, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + lineWidth, y + h - lineWidth, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x, y + h, 0).setColor(red, green, blue, alpha);
-        BufferUploader.drawWithShader(buffer.build());
-
-        RenderSystem.disableBlend();
     }
 
     public static void fill(final PoseStack ps, final int x, final int y, final int w, final int h, final int argbColor)
     {
-        fill(ps, x, y, w, h, (argbColor >> 16) & 0xff, (argbColor >> 8) & 0xff, argbColor & 0xff, (argbColor >> 24) & 0xff);
+        fill(ps, x, y, w, h, redFromArgb(argbColor), greenFromArgb(argbColor), blueFromArgb(argbColor), alphaFromArgb(argbColor));
     }
 
     public static void fill(final PoseStack ps,
@@ -212,26 +226,9 @@ public class UiRenderMacros
         {
             return;
         }
-
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        if (alpha != 255)
-        {
-            RenderSystem.enableBlend();
-        }
-        else
-        {
-            RenderSystem.disableBlend();
-        }
-
-        final Matrix4f m = ps.last().pose();
-        final BufferBuilder buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x, y, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x, y + h, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w, y + h, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, x + w, y, 0).setColor(red, green, blue, alpha);
-        BufferUploader.drawWithShader(buffer.build());
-
-        RenderSystem.disableBlend();
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("fill");
+        final RectI rect = transformRect(ps, x, y, w, h);
+        extractor.fill(rect.x0, rect.y0, rect.x1, rect.y1, argb(red, green, blue, alpha));
     }
 
     public static void fillGradient(final PoseStack ps,
@@ -247,14 +244,14 @@ public class UiRenderMacros
             y,
             w,
             h,
-            (argbColorStart >> 16) & 0xff,
-            (argbColorEnd >> 16) & 0xff,
-            (argbColorStart >> 8) & 0xff,
-            (argbColorEnd >> 8) & 0xff,
-            argbColorStart & 0xff,
-            argbColorEnd & 0xff,
-            (argbColorStart >> 24) & 0xff,
-            (argbColorEnd >> 24) & 0xff);
+            redFromArgb(argbColorStart),
+            redFromArgb(argbColorEnd),
+            greenFromArgb(argbColorStart),
+            greenFromArgb(argbColorEnd),
+            blueFromArgb(argbColorStart),
+            blueFromArgb(argbColorEnd),
+            alphaFromArgb(argbColorStart),
+            alphaFromArgb(argbColorEnd));
     }
 
     public static void fillGradient(final PoseStack ps,
@@ -275,31 +272,14 @@ public class UiRenderMacros
         {
             return;
         }
-
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        if (alphaStart != 255 || alphaEnd != 255)
-        {
-            RenderSystem.enableBlend();
-        }
-        else
-        {
-            RenderSystem.disableBlend();
-        }
-
-        final Matrix4f m = ps.last().pose();
-        final BufferBuilder buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x, y, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        buffer.addVertex(m, x, y + h, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x + w, y + h, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
-        buffer.addVertex(m, x + w, y, 0).setColor(redStart, greenStart, blueStart, alphaStart);
-        BufferUploader.drawWithShader(buffer.build());
-
-        RenderSystem.disableBlend();
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("fillGradient");
+        final RectI rect = transformRect(ps, x, y, w, h);
+        extractor.fillGradient(rect.x0, rect.y0, rect.x1, rect.y1, argb(redStart, greenStart, blueStart, alphaStart), argb(redEnd, greenEnd, blueEnd, alphaEnd));
     }
 
     public static void hLine(final PoseStack ps, final int x, final int xEnd, final int y, final int argbColor)
     {
-        line(ps, x, y, xEnd, y, (argbColor >> 16) & 0xff, (argbColor >> 8) & 0xff, argbColor & 0xff, (argbColor >> 24) & 0xff);
+        line(ps, x, y, xEnd, y, redFromArgb(argbColor), greenFromArgb(argbColor), blueFromArgb(argbColor), alphaFromArgb(argbColor));
     }
 
     public static void hLine(final PoseStack ps,
@@ -316,7 +296,7 @@ public class UiRenderMacros
 
     public static void vLine(final PoseStack ps, final int x, final int y, final int yEnd, final int argbColor)
     {
-        line(ps, x, y, x, yEnd, (argbColor >> 16) & 0xff, (argbColor >> 8) & 0xff, argbColor & 0xff, (argbColor >> 24) & 0xff);
+        line(ps, x, y, x, yEnd, redFromArgb(argbColor), greenFromArgb(argbColor), blueFromArgb(argbColor), alphaFromArgb(argbColor));
     }
 
     public static void vLine(final PoseStack ps,
@@ -333,7 +313,7 @@ public class UiRenderMacros
 
     public static void line(final PoseStack ps, final int x, final int y, final int xEnd, final int yEnd, final int argbColor)
     {
-        line(ps, x, y, xEnd, yEnd, (argbColor >> 16) & 0xff, (argbColor >> 8) & 0xff, argbColor & 0xff, (argbColor >> 24) & 0xff);
+        line(ps, x, y, xEnd, yEnd, redFromArgb(argbColor), greenFromArgb(argbColor), blueFromArgb(argbColor), alphaFromArgb(argbColor));
     }
 
     public static void line(final PoseStack ps,
@@ -350,28 +330,29 @@ public class UiRenderMacros
         {
             return;
         }
-
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        if (alpha != 255)
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("line");
+        final int color = argb(red, green, blue, alpha);
+        if (x == xEnd)
         {
-            RenderSystem.enableBlend();
+            final int startY = Math.min(y, yEnd);
+            final int height = Math.max(1, Math.abs(yEnd - y));
+            final RectI rect = transformRect(ps, x, startY, 1, height);
+            extractor.fill(rect.x0, rect.y0, rect.x1, rect.y1, color);
+            return;
         }
-        else
+        if (y == yEnd)
         {
-            RenderSystem.disableBlend();
+            final int startX = Math.min(x, xEnd);
+            final int width = Math.max(1, Math.abs(xEnd - x));
+            final RectI rect = transformRect(ps, startX, y, width, 1);
+            extractor.fill(rect.x0, rect.y0, rect.x1, rect.y1, color);
+            return;
         }
-
-        final Matrix4f m = ps.last().pose();
-        final BufferBuilder buffer = Tesselator.getInstance().begin(Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(m, x, y, 0).setColor(red, green, blue, alpha);
-        buffer.addVertex(m, xEnd, yEnd, 0).setColor(red, green, blue, alpha);
-        BufferUploader.drawWithShader(buffer.build());
-
-        RenderSystem.disableBlend();
+        throw unsupported26_2("line (non-axis-aligned)");
     }
 
     public static void blit(final PoseStack ps,
-        final ResourceLocation rl,
+        final Identifier rl,
         final int x,
         final int y,
         final int w,
@@ -385,7 +366,7 @@ public class UiRenderMacros
     }
 
     public static void blit(final PoseStack ps,
-        final ResourceLocation rl,
+        final Identifier rl,
         final int x,
         final int y,
         final int w,
@@ -408,7 +389,7 @@ public class UiRenderMacros
         final int w,
         final int h)
     {
-        final ResourceLocation atlasLocation = sprite.atlasLocation();
+        final Identifier atlasLocation = sprite.atlasLocation();
         final float u0 = sprite.getU0();
         final float v0 = sprite.getV0();
         final float u1 = sprite.getU1();
@@ -461,13 +442,13 @@ public class UiRenderMacros
         blit(ps, sprite.atlasLocation(), x, y, w, h, sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
     }
 
-    public static void blit(final PoseStack ps, final ResourceLocation rl, final int x, final int y, final int w, final int h)
+    public static void blit(final PoseStack ps, final Identifier rl, final int x, final int y, final int w, final int h)
     {
         blit(ps, rl, x, y, w, h, 0.0f, 0.0f, 1.0f, 1.0f);
     }
 
     public static void blit(final PoseStack ps,
-        final ResourceLocation rl,
+        final Identifier rl,
         final int x,
         final int y,
         final int w,
@@ -477,16 +458,9 @@ public class UiRenderMacros
         final float uMax,
         final float vMax)
     {
-        RenderSystem.setShaderTexture(0, rl);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-
-        final Matrix4f m = ps.last().pose();
-        final BufferBuilder buffer = Tesselator.getInstance().begin(Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_TEX);
-        buffer.addVertex(m, x, y, 0).setUv(uMin, vMin);
-        buffer.addVertex(m, x, y + h, 0).setUv(uMin, vMax);
-        buffer.addVertex(m, x + w, y + h, 0).setUv(uMax, vMax);
-        buffer.addVertex(m, x + w, y, 0).setUv(uMax, vMin);
-        BufferUploader.drawWithShader(buffer.build());
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("blit");
+        final RectI rect = transformRect(ps, x, y, w, h);
+        extractor.blit(rl, rect.x0, rect.y0, rect.x1, rect.y1, uMin, uMax, vMin, vMax);
     }
 
     /**
@@ -511,7 +485,7 @@ public class UiRenderMacros
      * @param repeatBoxHeight size of entire repeatable box (borders + repeat part) [texels]
      */
     protected static void blitRepeatable(final PoseStack ps,
-        final ResourceLocation rl,
+        final Identifier rl,
         final int x,
         final int y,
         final int width,
@@ -543,8 +517,7 @@ public class UiRenderMacros
         final float uTexelWidth = (uMax - uMin) / repeatBoxWidth;
         final float vTexelHeight = (vMax - vMin) / repeatBoxHeight;
 
-        final Matrix4f mat = ps.last().pose();
-        final BufferBuilder buffer = Tesselator.getInstance().begin(Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        final GuiGraphicsExtractor extractor = requireActiveExtractor("blitRepeatable");
 
         // main
         for (int i = 0; i < repeatCountX; i++)
@@ -563,7 +536,8 @@ public class UiRenderMacros
                 final float minV = vMin + vTexelHeight * vAdjust;
                 final float maxV = minV + vTexelHeight * h;
 
-                populateBlitTriangles(buffer, mat, xStart, xStart + w, yStart, yStart + h, minU, maxU, minV, maxV);
+                final RectI rect = transformRect(ps, xStart, yStart, w, h);
+                extractor.blit(rl, rect.x0, rect.y0, rect.x1, rect.y1, minU, maxU, minV, maxV);
             }
         }
 
@@ -583,7 +557,8 @@ public class UiRenderMacros
             final float minU = uMin + uTexelWidth * uAdjust;
             final float maxU = minU + uTexelWidth * w;
 
-            populateBlitTriangles(buffer, mat, xStart, xStart + w, yEnd, yEnd + vBot, minU, maxU, restMinV, vMax);
+            final RectI rect = transformRect(ps, xStart, yEnd, w, vBot);
+            extractor.blit(rl, rect.x0, rect.y0, rect.x1, rect.y1, minU, maxU, restMinV, vMax);
         }
 
         // left border
@@ -595,20 +570,17 @@ public class UiRenderMacros
             final float minV = vMin + vTexelHeight * vAdjust;
             final float maxV = minV + vTexelHeight * h;
 
-            populateBlitTriangles(buffer, mat, xEnd, xEnd + uLeft, yStart, yStart + h, restMinU, uMax, minV, maxV);
+            final RectI rect = transformRect(ps, xEnd, yStart, uLeft, h);
+            extractor.blit(rl, rect.x0, rect.y0, rect.x1, rect.y1, restMinU, uMax, minV, maxV);
         }
 
         // bot left corner
-        populateBlitTriangles(buffer, mat, xEnd, xEnd + uLeft, yEnd, yEnd + vBot, restMinU, uMax, restMinV, vMax);
-
-        RenderSystem.setShaderTexture(0, rl);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-
-        BufferUploader.drawWithShader(buffer.build());
+        final RectI rect = transformRect(ps, xEnd, yEnd, uLeft, vBot);
+        extractor.blit(rl, rect.x0, rect.y0, rect.x1, rect.y1, restMinU, uMax, restMinV, vMax);
     }
 
     public static void populateFillTriangles(final Matrix4f m,
-        final BufferBuilder buffer,
+        final VertexConsumer buffer,
         final int x,
         final int y,
         final int w,
@@ -627,7 +599,7 @@ public class UiRenderMacros
     }
 
     public static void populateFillGradientTriangles(final Matrix4f m,
-        final BufferBuilder buffer,
+        final VertexConsumer buffer,
         final int x,
         final int y,
         final int w,
@@ -649,7 +621,7 @@ public class UiRenderMacros
         buffer.addVertex(m, x + w, y + h, 0).setColor(redEnd, greenEnd, blueEnd, alphaEnd);
     }
 
-    public static void populateBlitTriangles(final BufferBuilder buffer,
+    public static void populateBlitTriangles(final VertexConsumer buffer,
         final Matrix4f mat,
         final float xStart,
         final float xEnd,
@@ -689,50 +661,7 @@ public class UiRenderMacros
         final float pitch,
         final Entity entity)
     {
-        // INLINE: vanilla from InventoryScreen
-        final LivingEntity livingEntity = (entity instanceof LivingEntity) ? (LivingEntity) entity : null;
-        final Minecraft mc = Minecraft.getInstance();
-        if (entity.level() == null) return; // this was entity.setLevel, not sure why cuz sus, dont care if entity has no level
-        poseStack.pushPose();
-        poseStack.translate((float) x, (float) y, 1050.0F);
-        poseStack.scale(1.0F, 1.0F, -1.0F);
-        poseStack.translate(0.0D, 0.0D, 1000.0D);
-        poseStack.scale((float) scale, (float) scale, (float) scale);
-        final Quaternionf pitchRotation = Axis.XP.rotationDegrees(pitch);
-        poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
-        poseStack.mulPose(pitchRotation);
-        final float oldYaw = entity.getYRot();
-        final float oldPitch = entity.getXRot();
-        final float oldYawOffset = livingEntity == null ? 0F : livingEntity.yBodyRot;
-        final float oldPrevYawHead = livingEntity == null ? 0F : livingEntity.yHeadRotO;
-        final float oldYawHead = livingEntity == null ? 0F : livingEntity.yHeadRot;
-        entity.setYRot(180.0F + (float) headYaw);
-        entity.setXRot(-pitch);
-        if (livingEntity != null)
-        {
-            livingEntity.yBodyRot = 180.0F + yaw;
-            livingEntity.yHeadRot = entity.getYRot();
-            livingEntity.yHeadRotO = entity.getYRot();
-        }
-        Lighting.setupForEntityInInventory();
-        final EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
-        pitchRotation.conjugate();
-        dispatcher.overrideCameraOrientation(pitchRotation);
-        dispatcher.setRenderShadow(false);
-        final MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-        RenderSystem.runAsFancy(() -> dispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, poseStack, buffers, 0x00F000F0));
-        buffers.endBatch();
-        dispatcher.setRenderShadow(true);
-        entity.setYRot(oldYaw);
-        entity.setXRot(oldPitch);
-        if (livingEntity != null)
-        {
-            livingEntity.yBodyRot = oldYawOffset;
-            livingEntity.yHeadRotO = oldPrevYawHead;
-            livingEntity.yHeadRot = oldYawHead;
-        }
-        poseStack.popPose();
-        Lighting.setupFor3DItems();
+        throw unsupported26_2("drawEntity");
     }
 
     /**
@@ -741,7 +670,7 @@ public class UiRenderMacros
      */
     public static ResolvedBlit resolveSprite(final TextureAtlasSprite sprite, final GuiSpriteScaling guiScaling)
     {
-        final ResourceLocation atlasLocation = sprite.atlasLocation();
+        final Identifier atlasLocation = sprite.atlasLocation();
         final float u0 = sprite.getU0();
         final float v0 = sprite.getV0();
         final float u1 = sprite.getU1();
@@ -786,10 +715,6 @@ public class UiRenderMacros
                 }
             };
         }
-        if (!FMLEnvironment.production)
-        {
-            throw new UnsupportedOperationException("Missing resolver for gui scaling: " + guiScaling.type());
-        }
         return ResolvedBlit.EMPTY;
     }
 
@@ -802,5 +727,9 @@ public class UiRenderMacros
         public static final ResolvedBlit EMPTY = (ps, x, y, w, h) -> {};
 
         void blit(PoseStack ps, int x, int y, int w, int h);
+    }
+
+    private record RectI(int x0, int y0, int x1, int y1)
+    {
     }
 }

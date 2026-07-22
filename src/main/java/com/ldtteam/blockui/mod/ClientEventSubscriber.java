@@ -15,10 +15,10 @@ import com.ldtteam.blockui.views.BOWindow;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.PlayerSkin;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
@@ -60,9 +60,18 @@ public class ClientEventSubscriber
     @SubscribeEvent
     public static void onClientTickStart(final ClientTickEvent.Pre event)
     {
-        if (Screen.hasAltDown() && Screen.hasControlDown() && Screen.hasShiftDown())
+        final Minecraft minecraft = Minecraft.getInstance();
+        final boolean modifiersDown = InputConstants.isKeyDown(minecraft.getWindow(), InputConstants.KEY_LALT)
+            && InputConstants.isKeyDown(minecraft.getWindow(), InputConstants.KEY_LCONTROL)
+            && InputConstants.isKeyDown(minecraft.getWindow(), InputConstants.KEY_LSHIFT);
+
+        if (modifiersDown)
         {
-            if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_X))
+            if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_T))
+            {
+                openTestWindow(Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test2.xml"));
+            }
+            else if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_X))
             {
                 final BOWindow window = new BOWindow();
                 int id = 0;
@@ -75,19 +84,10 @@ public class ClientEventSubscriber
                 });
                 window.addChild(dumpAtlases);
 
-                window.addChild(createTestGuiButton(id++, "General All-in-one", ResourceLocation.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test.xml"), parent -> {
-                    parent.findPaneOfTypeByID("missing_out_of_jar", Image.class).setImage(OutOfJarResourceLocation.ofMinecraftFolder(BlockUI.MOD_ID, "missing_out_of_jar.png"), false);
-                    parent.findPaneOfTypeByID("working_out_of_jar", Image.class).setImage(OutOfJarResourceLocation.of(BlockUI.MOD_ID, Path.of("../../src/test/resources/button.png")), false);
-                    OutOfJarResourceLocation.ofMinecraftSkin(Minecraft.getInstance(), Minecraft.getInstance().getGameProfile(), null)
-                        .thenAccept(resLoc -> parent.findPaneOfTypeByID("player_skin", Image.class).setImage(resLoc, false));
-                    OutOfJarResourceLocation.ofMinecraftSkin(Minecraft.getInstance(), Minecraft.getInstance().getGameProfile(), PlayerSkin::capeTexture)
-                        .thenAccept(resLoc -> {if (resLoc!=null){parent.findPaneOfTypeByID("player_cape", Image.class).setImage(resLoc, false);}});
-                    OutOfJarResourceLocation.ofMinecraftSkin(Minecraft.getInstance(), Minecraft.getInstance().getGameProfile(), PlayerSkin::elytraTexture)
-                        .thenAccept(resLoc -> {if (resLoc!=null){parent.findPaneOfTypeByID("player_elytra", Image.class).setImage(resLoc, false);}});
-                }));
-                window.addChild(createTestGuiButton(id++, "Tooltip Positioning", ResourceLocation.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test2.xml")));
-                window.addChild(createTestGuiButton(id++, "ItemIcon To BlockState", ResourceLocation.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test3.xml"), BlockStateTestGui::setup));
-                window.addChild(createTestGuiButton(id++, "Scrolling Lists", ResourceLocation.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test4.xml"), ScrollingListsGui::setup));
+                window.addChild(createTestGuiButton(id++, "General All-in-one", Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test.xml")));
+                window.addChild(createTestGuiButton(id++, "Tooltip Positioning", Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test2.xml")));
+                window.addChild(createTestGuiButton(id++, "ItemIcon To BlockState", Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test3.xml"), BlockStateTestGui::setup));
+                window.addChild(createTestGuiButton(id++, "Scrolling Lists", Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test4.xml"), ScrollingListsGui::setup));
 
                 final Text builderTest = new Text();
                 builderTest.setSize(ButtonImage.DEFAULT_BUTTON_WIDTH * 2 + 20, ButtonImage.DEFAULT_BUTTON_HEIGHT);
@@ -119,35 +119,37 @@ public class ClientEventSubscriber
     {
         if (Minecraft.getInstance().level != null)
         {
-            Minecraft.getInstance().getProfiler().push("hook_manager_tick");
             HookRegistries.tick(Minecraft.getInstance().level.getGameTime());
-            Minecraft.getInstance().getProfiler().pop();
         }
+    }
+
+    @SafeVarargs
+    private static void openTestWindow(final Identifier testGuiResLoc, final Consumer<BOWindow>... setups)
+    {
+        new BOWindow(testGuiResLoc)
+        {
+            @Override
+            public void onOpened()
+            {
+                super.onOpened();
+                for (final Consumer<BOWindow> setup : setups)
+                {
+                    setup.accept(this);
+                }
+            }
+        }.openAsLayer();
     }
 
     @SafeVarargs
     private static Button createTestGuiButton(final int order,
         final String name,
-        final ResourceLocation testGuiResLoc,
+        final Identifier testGuiResLoc,
         final Consumer<BOWindow>... setups)
     {
         final Button button = new ButtonImage(true);
         button.setPosition((order % 2) * (button.getWidth() + 20), (order / 2) * (button.getHeight() + 10));
         button.setText(Component.literal(name));
-        button.setHandler(b -> {
-            new BOWindow(testGuiResLoc)
-            {
-                @Override
-                public void onOpened()
-                {
-                    super.onOpened();
-                    for (final Consumer<BOWindow> setup : setups)
-                    {
-                        setup.accept(this);
-                    }
-                }
-            }.openAsLayer();
-        });
+        button.setHandler(b -> openTestWindow(testGuiResLoc, setups));
         return button;
     }
 
@@ -175,7 +177,7 @@ public class ClientEventSubscriber
     @SubscribeEvent
     public static void renderOverlay(final RenderGuiLayerEvent.Pre event)
     {
-        if (Minecraft.getInstance().screen instanceof BOScreen && event.getName().equals(VanillaGuiLayers.CROSSHAIR))
+        if (Minecraft.getInstance().gui.screen() instanceof BOScreen && event.getName().equals(VanillaGuiLayers.CROSSHAIR))
         {
             event.setCanceled(true);
         }

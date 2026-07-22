@@ -6,7 +6,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.Util;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -163,7 +162,7 @@ public class Codecs
      */
     public static <A, B extends ByteBuf> StreamCodec<B, A> wrapNullable(final StreamCodec<B, A> elementCodec)
     {
-        return Util.<StreamCodec<B, A>, StreamCodec<B, A>>memoize(s -> streamWithEmpty(s, null)).apply(elementCodec);
+        return streamWithEmpty(elementCodec, null);
     }
 
     /**

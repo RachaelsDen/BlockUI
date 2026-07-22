@@ -3,28 +3,32 @@ package com.ldtteam.blockui.mod;
 import com.ldtteam.blockui.AtlasManager;
 import com.ldtteam.blockui.Loader;
 import net.minecraft.client.renderer.BiomeColors;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterTextureAtlasesEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.event.ModMismatchEvent;
 
 public class ClientLifecycleSubscriber
 {
     @SubscribeEvent
-    public static void onRegisterReloadListeners(final RegisterClientReloadListenersEvent event)
+    public static void onAddClientReloadListeners(final AddClientReloadListenersEvent event)
     {
-        event.registerReloadListener(Loader.INSTANCE);
-        AtlasManager.INSTANCE.addAtlas(event::registerReloadListener, BlockUI.MOD_ID);
+        event.addListener(Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "loader"), Loader.INSTANCE);
     }
 
     @SubscribeEvent
-    public static void onRegisterBlockColor(final RegisterColorHandlersEvent.Block event)
+    public static void onRegisterTextureAtlases(final RegisterTextureAtlasesEvent event)
     {
-        // replace cauldron with plains default color (4159204, with slighty more light in HSL += 8%)
-        event.register(
-            (state, level, pos, tintIndex) -> level != null && pos != null ? BiomeColors.getAverageWaterColor(level, pos) : 0x638fe9,
-            Blocks.WATER_CAULDRON);
+        // deferred: native atlas registration for custom GUI atlases
+    }
+
+    @SubscribeEvent
+    public static void onRegisterBlockColor(final RegisterColorHandlersEvent.BlockTintSources event)
+    {
+        // deferred: water cauldron tint registration on 26.2
     }
 
     @SubscribeEvent

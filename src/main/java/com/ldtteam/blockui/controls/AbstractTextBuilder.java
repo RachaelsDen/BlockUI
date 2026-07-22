@@ -11,6 +11,7 @@ import com.ldtteam.blockui.util.SpacerTextComponent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 
@@ -158,7 +159,15 @@ public abstract class AbstractTextBuilder<P extends AbstractTextElement, R exten
     {
         newLine();
 
-        Style style = new Style(Color.toVanilla(color), bold, italic, underlined, strikeThrough, obfuscated, clickEvent, null, insertionEvent, null);
+        Style style = Style.EMPTY
+            .withColor(Color.toVanilla(color))
+            .withBold(bold)
+            .withItalic(italic)
+            .withUnderlined(underlined)
+            .withStrikethrough(strikeThrough)
+            .withObfuscated(obfuscated)
+            .withClickEvent(clickEvent)
+            .withInsertion(insertionEvent);
         if (style.equals(Style.EMPTY))
         {
             style = Style.EMPTY;
@@ -250,11 +259,11 @@ public abstract class AbstractTextBuilder<P extends AbstractTextElement, R exten
                 return underlined();
 
             default:
-                if (!textFormatting.isColor())
+                if (!isColorFormatting(textFormatting))
                 {
                     throw new IllegalArgumentException("Unknown non-color textformatting.");
                 }
-                return color(textFormatting.getColor() == null ? defaultColor : textFormatting.getColor());
+                return color(vanillaFormattingColor(textFormatting, defaultColor));
         }
     }
 
@@ -267,7 +276,7 @@ public abstract class AbstractTextBuilder<P extends AbstractTextElement, R exten
     public R colorVanillaCode(final char code)
     {
         final ChatFormatting tf = ChatFormatting.getByCode(code);
-        return color(tf == null || tf.getColor() == null ? defaultColor : tf.getColor());
+        return color(vanillaFormattingColor(tf, defaultColor));
     }
 
     /**
@@ -278,8 +287,40 @@ public abstract class AbstractTextBuilder<P extends AbstractTextElement, R exten
      */
     public R colorName(final String name)
     {
-        final ChatFormatting tf = ChatFormatting.getByName(name);
-        return color(Color.getByName(name, tf == null || tf.getColor() == null ? color : tf.getColor()));
+        final ChatFormatting tf = tryGetFormattingByName(name);
+        return color(Color.getByName(name, vanillaFormattingColor(tf, color)));
+    }
+
+    private static int vanillaFormattingColor(final ChatFormatting formatting, final int fallback)
+    {
+        if (formatting == null || !isColorFormatting(formatting))
+        {
+            return fallback;
+        }
+
+        final TextColor color = TextColor.fromLegacyFormat(formatting);
+        return color == null ? fallback : color.getValue();
+    }
+
+    private static boolean isColorFormatting(final ChatFormatting formatting)
+    {
+        return switch (formatting)
+        {
+            case BOLD, ITALIC, OBFUSCATED, RESET, STRIKETHROUGH, UNDERLINE -> false;
+            default -> true;
+        };
+    }
+
+    private static ChatFormatting tryGetFormattingByName(final String name)
+    {
+        try
+        {
+            return ChatFormatting.valueOf(name.trim().toUpperCase());
+        }
+        catch (final IllegalArgumentException ignored)
+        {
+            return null;
+        }
     }
 
     /**

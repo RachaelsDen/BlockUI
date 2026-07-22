@@ -723,7 +723,7 @@ public class Pane extends UiRenderMacros
         window.getScreen().width = contentWidth;
         window.getScreen().height = contentHeight;
 
-        RenderSystem.enableScissor(scissorsXstart, scissorsYstart, scissorsXend - scissorsXstart, scissorsYend - scissorsYstart);
+        RenderSystem.enableScissorForRenderTypeDraws(scissorsXstart, scissorsYstart, scissorsXend - scissorsXstart, scissorsYend - scissorsYstart);
     }
 
     /**
@@ -777,11 +777,11 @@ public class Pane extends UiRenderMacros
         if (!scissorsInfoStack.isEmpty())
         {
             final ScissorsInfo info = scissorsInfoStack.peek();
-            RenderSystem.enableScissor(info.xStart, info.yStart, info.xEnd - info.xStart, info.yEnd - info.yStart);
+            RenderSystem.enableScissorForRenderTypeDraws(info.xStart, info.yStart, info.xEnd - info.xStart, info.yEnd - info.yStart);
         }
         else
         {
-            RenderSystem.disableScissor();
+            RenderSystem.disableScissorForRenderTypeDraws();
         }
     }
 

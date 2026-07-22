@@ -19,8 +19,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Tuple;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLEnvironment;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -34,7 +33,7 @@ import java.util.Objects;
  */
 public class Image extends Pane 
 {
-    protected ResourceLocation resourceLocation = null;
+    protected Identifier resourceLocation = null;
     protected int u = 0;
     protected int v = 0;
     protected int uWidth = 0;
@@ -72,12 +71,12 @@ public class Image extends Pane
     }
 
     /**
-     * Load and image from a {@link ResourceLocation} and return a {@link Tuple} containing its width and height.
+     * Load an image from a resource and return its width and height.
      *
      * @param resourceLocation The {@link ResourceLocation} pointing to the image.
      * @return Width and height.
      */
-    public static SizeI getImageDimensions(final ResourceLocation resourceLocation)
+    public static SizeI getImageDimensions(final Identifier resourceLocation)
     {
         // this is called by most of image classes -> parse our textures
         OutOfJarTexture.assertLoadedDefaultManagers(resourceLocation);
@@ -124,7 +123,7 @@ public class Image extends Pane
             }
         }
 
-        if (!FMLEnvironment.production)
+        if (!FMLEnvironment.isProduction())
         {
             throw new RuntimeException("Couldn't resolve size for image: " + resourceLocation);
         }
@@ -141,7 +140,7 @@ public class Image extends Pane
      * @param uWidth  image width.
      * @param vHeight image height.
      */
-    public void setImage(final ResourceLocation rl, final int u, final int v, final int uWidth, final int vHeight)
+    public void setImage(final Identifier rl, final int u, final int v, final int uWidth, final int vHeight)
     {
         if (Objects.equals(rl, resourceLocation) && this.u == u && this.v == v && this.uWidth == uWidth && this.vHeight == vHeight)
         {
@@ -162,7 +161,7 @@ public class Image extends Pane
      * @param rl     ResourceLocation for the image.
      * @param keepUv whether to keep previous u and v values or use full size
      */
-    public void setImage(final ResourceLocation rl, final boolean keepUv)
+    public void setImage(final Identifier rl, final boolean keepUv)
     {
         if (keepUv)
         {
@@ -183,7 +182,7 @@ public class Image extends Pane
     @Override
     public void drawSelf(final BOGuiGraphics target, final double mx, final double my)
     {
-        if (!FMLEnvironment.production)
+        if (!FMLEnvironment.isProduction())
         {
             Objects.requireNonNull(resourceLocation, () -> "Missing image source: " + id + " | " + window.getXmlResourceLocation());
         }
@@ -193,17 +192,14 @@ public class Image extends Pane
             resolvedBlit = resolveBlit(resourceLocation, u, v, uWidth, vHeight);
         }
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
         resolvedBlit.blit(target.pose(), x, y, width, height);
-        RenderSystem.disableBlend();
     }
     
     /**
      * @param resLoc texture resource location
      * @return resolved blit - with precomputed values and detached from all possible instances
      */
-    public static ResolvedBlit resolveBlit(final ResourceLocation resLoc)
+    public static ResolvedBlit resolveBlit(final Identifier resLoc)
     {
         return resolveBlit(resLoc, 0, 0, 0, 0);
     }
@@ -216,7 +212,7 @@ public class Image extends Pane
      * @param vHeight in texels
      * @return resolved blit - with precomputed values and detached from all possible instances
      */
-    public static ResolvedBlit resolveBlit(final ResourceLocation resLoc, final int u, final int v, final int uWidth, final int vHeight)
+    public static ResolvedBlit resolveBlit(final Identifier resLoc, final int u, final int v, final int uWidth, final int vHeight)
     {
         // if bad input skip resolving
         if (resLoc == null || resLoc == MissingTextureAtlasSprite.getLocation())
@@ -239,7 +235,7 @@ public class Image extends Pane
             // Mojang bug: if texture is null = nothing is registered to resLoc now
             // then blit will leak one opengl texture id every time this is null
             // so if null use missingTexture instead
-            final ResourceLocation notBugged = texture == null ? MissingTextureAtlasSprite.getLocation() : resLoc;
+        final Identifier notBugged = texture == null ? MissingTextureAtlasSprite.getLocation() : resLoc;
             return (ps, x, y, w, h) -> blit(ps, notBugged, x, y, w, h);
         }
 

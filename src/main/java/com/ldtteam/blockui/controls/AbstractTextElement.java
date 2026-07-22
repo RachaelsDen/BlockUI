@@ -8,17 +8,12 @@ import com.ldtteam.blockui.util.SpacerTextComponent;
 import com.ldtteam.blockui.util.SpacerTextComponent.FormattedSpacerComponent;
 import com.ldtteam.blockui.util.ToggleableTextComponent;
 import com.ldtteam.blockui.util.ToggleableTextComponent.FormattedToggleableCharSequence;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
-import net.neoforged.neoforge.client.NeoForgeRenderTypes;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector4f;
 
 import java.util.Collections;
 import java.util.List;
@@ -307,22 +302,6 @@ public abstract class AbstractTextElement extends Pane
         ms.pushPose();
         ms.translate(x + offsetX, y + offsetY, 0.0d);
         ms.scale((float) textScale, (float) textScale, 1.0f);
-
-        final Matrix4f matrix4f = ms.last().pose();
-
-        // we want to see how big is one scaled pixel on monitor (using one texel)
-        final int fbW = window.getScreen().getFramebufferWidth(), fbH = window.getScreen().getFramebufferHeight();
-        final Vector4f temp = new Vector4f(1, 1, 0, 0);
-        matrix4f.transform(temp); // PVM
-        temp.w = 1; // vector -> point
-        temp.mulProject(RenderSystem.getProjectionMatrix()); // projection, perspective
-        temp.add(1, 1, 0, 0); // viewport, discard non (x,y)
-        temp.mul(fbW / 2.0f, fbH / 2.0f, 0, 0);
-
-        final float scale = temp.distanceSquared(FILTERING_THRESHOLD, fbH - FILTERING_THRESHOLD, 0, 0);
-        NeoForgeRenderTypes.enableTextTextureLinearFiltering = Math.abs(temp.x - fbH + temp.y) > FILTERING_THRESHOLD || scale < FILTERING_MAX_SCALE * FILTERING_MAX_SCALE;
-
-        final MultiBufferSource.BufferSource drawBuffer = target.bufferSource();
         int lineShift = 0;
         for (FormattedCharSequence row : preparedText)
         {
@@ -360,13 +339,9 @@ public abstract class AbstractTextElement extends Pane
                 xOffset = 0;
             }
 
-            mc.font.drawInBatch(row, xOffset, lineShift, color, textShadow, matrix4f, drawBuffer, Font.DisplayMode.NORMAL, 0, 15728880);
+            target.drawString(row, xOffset, lineShift, color, textShadow);
             lineShift += mc.font.lineHeight + textLinespace;
         }
-        drawBuffer.endBatch();
-
-        NeoForgeRenderTypes.enableTextTextureLinearFiltering = false;
-        RenderSystem.disableBlend();
 
         ms.popPose();
     }

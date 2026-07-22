@@ -9,7 +9,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.fml.loading.FMLEnvironment;
 
@@ -66,9 +66,9 @@ public class ButtonImage extends Button
 
         if (params.hasAttribute("source"))
         {
-            final ResourceLocation enabled = params.getResource("source", MissingTextureAtlasSprite.getLocation());
-            final ResourceLocation focused = params.getResource("highlight", enabled);
-            final ResourceLocation disabled = params.getResource("disabled", enabled);
+        final Identifier enabled = params.getResource("source", MissingTextureAtlasSprite.getLocation());
+        final Identifier focused = params.getResource("highlight", enabled);
+        final Identifier disabled = params.getResource("disabled", enabled);
             setTextures(new WidgetSprites(enabled, disabled, focused, disabled));
         }
         else
@@ -143,7 +143,7 @@ public class ButtonImage extends Button
         return textures;
     }
 
-    private boolean replacedVanillaButton(final ResourceLocation loc)
+    private boolean replacedVanillaButton(final Identifier loc)
     {
         if (textures == VANILLA_BUTTON)
         {
@@ -158,7 +158,7 @@ public class ButtonImage extends Button
      *
      * @param loc ResourceLocation for the image.
      */
-    public void setImage(final ResourceLocation loc)
+    public void setImage(final Identifier loc)
     {
         if (!replacedVanillaButton(loc) && !Objects.equals(loc, textures.enabled()))
         {
@@ -176,7 +176,7 @@ public class ButtonImage extends Button
      *
      * @param loc ResourceLocation for the image.
      */
-    public void setImageHighlight(final ResourceLocation loc)
+    public void setImageHighlight(final Identifier loc)
     {
         if (!replacedVanillaButton(loc) && !Objects.equals(loc, textures.enabledFocused()))
         {
@@ -189,7 +189,7 @@ public class ButtonImage extends Button
      *
      * @param loc ResourceLocation for the image.
      */
-    public void setImageDisabled(final ResourceLocation loc)
+    public void setImageDisabled(final Identifier loc)
     {
         if (!replacedVanillaButton(loc) && !Objects.equals(loc, textures.disabled()))
         {
@@ -207,7 +207,7 @@ public class ButtonImage extends Button
      *
      * @param loc ResourceLocation for the image.
      */
-    public void setImageHighlightDisabled(final ResourceLocation loc)
+    public void setImageHighlightDisabled(final Identifier loc)
     {
         if (!replacedVanillaButton(loc) && !Objects.equals(loc, textures.disabledFocused()))
         {
@@ -225,7 +225,7 @@ public class ButtonImage extends Button
     @Override
     public void drawSelf(final BOGuiGraphics target, final double mx, final double my)
     {
-        if (!FMLEnvironment.production)
+        if (!FMLEnvironment.isProduction())
         {
             Objects.requireNonNull(textures.enabled(), () -> id + " | " + window.getXmlResourceLocation());
         }
@@ -235,14 +235,8 @@ public class ButtonImage extends Button
             resolvedTextures = ResolvedWidgetSprites.fromUnresolved(textures, Image::resolveBlit);
         }
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-
         resolvedTextures.getAndPrepare(isEnabled(), wasCursorInPane).blit(target.pose(), x, y, width, height);
         postDrawBackground(target, mx, my);
-
-        RenderSystem.disableBlend();
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         super.drawSelf(target, mx, my);
     }

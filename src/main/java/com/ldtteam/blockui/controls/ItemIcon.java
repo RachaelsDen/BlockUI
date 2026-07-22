@@ -7,17 +7,19 @@ import com.ldtteam.blockui.controls.AbstractTextBuilder.AutomaticTooltipBuilder;
 import com.ldtteam.blockui.controls.Tooltip.AutomaticTooltip;
 import com.ldtteam.blockui.mod.Log;
 import com.ldtteam.blockui.mod.item.BlockStateRenderingData;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.ldtteam.blockui.util.SpacerTextComponent;
 import com.ldtteam.blockui.util.ToggleableTextComponent;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.TooltipContext;
@@ -42,6 +44,8 @@ public class ItemIcon extends Pane
      */
     @Nullable
     protected ItemStack itemStack;
+    @Nullable
+    protected Identifier pendingItemId;
 
     /**
      * If true then on next frame tooltip content will recompile
@@ -66,14 +70,10 @@ public class ItemIcon extends Pane
     {
         super(params);
 
-        final ResourceLocation itemName = params.getResource("item");
+        final Identifier itemName = params.getResource("item");
         if (itemName != null)
         {
-            final Item item = BuiltInRegistries.ITEM.get(itemName);
-            if (item != null)
-            {
-                setItem(item.getDefaultInstance());
-            }
+            pendingItemId = itemName;
         }
 
         this.renderItemDecorations = params.getBoolean("renderItemDecorations", renderItemDecorations);
@@ -87,6 +87,7 @@ public class ItemIcon extends Pane
     public void setItem(final ItemStack itemStack)
     {
         clearDataAndScheduleTooltipUpdate();
+        pendingItemId = null;
         this.itemStack = itemStack;
         onItemUpdate();
     }
@@ -99,6 +100,23 @@ public class ItemIcon extends Pane
 
     }
 
+    protected void tryResolvePendingItem()
+    {
+        if (pendingItemId == null || itemStack != null)
+        {
+            return;
+        }
+
+        try
+        {
+            BuiltInRegistries.ITEM.get(pendingItemId).ifPresent(item -> this.itemStack = new ItemStack(item));
+        }
+        catch (final RuntimeException ex)
+        {
+            Log.getLogger().warn("Deferring item stack creation for {} on 26.2 runtime", pendingItemId, ex);
+        }
+    }
+
     /**
      * Get the itemstack of the icon.
      *
@@ -106,6 +124,7 @@ public class ItemIcon extends Pane
      */
     public ItemStack getItem()
     {
+        tryResolvePendingItem();
         return this.itemStack;
     }
 
@@ -143,7 +162,7 @@ public class ItemIcon extends Pane
         }
         if (!itemStack.isEmpty() && blockStateExtension.blockEntity() != null)
         {
-            blockStateExtension.blockEntity().saveToItem(itemStack, mc.level.registryAccess());
+            // deferred: block entity item-data transfer needs its own 26.2 compatibility pass
         }
         onItemUpdate();
     }
@@ -182,6 +201,7 @@ public class ItemIcon extends Pane
     @Override
     public void drawSelf(final BOGuiGraphics target, final double mx, final double my)
     {
+        tryResolvePendingItem();
         updateTooltipIfNeeded();
         if (!isDataEmpty())
         {
@@ -197,8 +217,6 @@ public class ItemIcon extends Pane
                 target.renderItemDecorations(itemStack, 0, 0);
             }
 
-            RenderSystem.defaultBlendFunc();
-            RenderSystem.disableBlend();
             ms.popPose();
         }
     }
@@ -288,8 +306,8 @@ public class ItemIcon extends Pane
         if (prevTooltipSize != tooltipList.size())
         {
             // add "show more info" text
-            tooltipList.add(ToggleableTextComponent.ofNegated(Screen::hasShiftDown, Component.empty()));
-            tooltipList.add(ToggleableTextComponent.ofNegated(Screen::hasShiftDown,
+            tooltipList.add(ToggleableTextComponent.ofNegated(ItemIcon::isShiftDown, Component.empty()));
+            tooltipList.add(ToggleableTextComponent.ofNegated(ItemIcon::isShiftDown,
                 Component.translatable("blockui.tooltip.item_additional_info", Component.translatable("key.keyboard.left.shift"))
                     .withStyle(ChatFormatting.GOLD)));
         }
@@ -300,11 +318,16 @@ public class ItemIcon extends Pane
 
     protected static MutableComponent wrapShift(final MutableComponent wrapped)
     {
-        return ToggleableTextComponent.of(Screen::hasShiftDown, wrapped);
+        return ToggleableTextComponent.of(ItemIcon::isShiftDown, wrapped);
     }
 
     protected static MutableComponent wrapShift(final MutableComponent wrapped, final boolean shouldWrap)
     {
-        return shouldWrap ? ToggleableTextComponent.of(Screen::hasShiftDown, wrapped) : wrapped;
+        return shouldWrap ? ToggleableTextComponent.of(ItemIcon::isShiftDown, wrapped) : wrapped;
+    }
+
+    private static boolean isShiftDown()
+    {
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_LSHIFT);
     }
 }

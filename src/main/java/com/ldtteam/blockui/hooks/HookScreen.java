@@ -8,7 +8,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Screen wrapper.
@@ -27,10 +27,9 @@ public class HookScreen extends BOScreen
     }
 
     @Override
-    @Deprecated
-    public void render(final GuiGraphics target, final int mx, final int my, final float f)
+    public void extractRenderState(final GuiGraphicsExtractor target, final int mx, final int my, final float f)
     {
-        render(target.pose());
+        render(new PoseStack());
     }
 
     public void render(final PoseStack ms)
@@ -40,10 +39,6 @@ public class HookScreen extends BOScreen
             return;
         }
 
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.enableDepthTest();
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
         ms.translate(-width / 2, -height, 0.0d);
         try
         {

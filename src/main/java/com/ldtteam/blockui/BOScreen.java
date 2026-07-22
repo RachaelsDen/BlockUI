@@ -2,20 +2,15 @@ package com.ldtteam.blockui;
 
 import com.ldtteam.blockui.util.cursor.CursorUtils;
 import com.ldtteam.blockui.views.BOWindow;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexSorting;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.ClientHooks;
-import net.neoforged.neoforge.client.NeoForgeRenderTypes;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Objects;
@@ -49,63 +44,45 @@ public class BOScreen extends Screen
     }
 
     @Override
-    public void render(final GuiGraphics ms, final int mx, final int my, final float f)
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mx, final int my, final float f)
     {
         if (minecraft == null || !isOpen) // should never happen though
         {
             return;
         }
 
+        final Minecraft mc = Minecraft.getInstance();
         absoluteMouseX = mx;
         absoluteMouseY = my;
-        framebufferWidth = ms.minecraft.getWindow().getWidth();
-        framebufferHeight = ms.minecraft.getWindow().getHeight();
+        framebufferWidth = mc.getWindow().getWidth();
+        framebufferHeight = mc.getWindow().getHeight();
         final int guiWidth = Math.max(framebufferWidth, 320);
         final int guiHeight = Math.max(framebufferHeight, 240);
 
-        final boolean oldFilteringValue = NeoForgeRenderTypes.enableTextTextureLinearFiltering;
-        NeoForgeRenderTypes.enableTextTextureLinearFiltering = false;
+        mcScale = mc.getWindow().getGuiScale();
+        renderScale = window.getRenderType().calcRenderScale(mc.getWindow(), window);
 
-        mcScale = ms.minecraft.getWindow().getGuiScale();
-        renderScale = window.getRenderType().calcRenderScale(ms.minecraft.getWindow(), window);
-
-        if (window.hasLightbox() && ms.minecraft.screen == this)
+        if (window.hasLightbox() && mc.gui.screen() == this)
         {
-            UiRenderMacros.fillGradient(ms.pose(), 0, 0, framebufferWidth, framebufferHeight, -1072689136, -804253680);
-            //super.renderBackground(ms);
+            graphics.fillGradient(0, 0, framebufferWidth, framebufferHeight, -1072689136, -804253680);
         }
 
         width = window.getWidth();
         height = window.getHeight();
-        x = Math.floor((guiWidth - width * renderScale) / 2.0d);
-        y = Math.floor((guiHeight - height * renderScale) / 2.0d);
-
-        // replace vanilla projection
-        final Matrix4fStack shaderPs = RenderSystem.getModelViewStack();
-        final Matrix4f oldProjection = RenderSystem.getProjectionMatrix();
-        RenderSystem.setProjectionMatrix(
-            new Matrix4f().setOrtho(0.0F, framebufferWidth, framebufferHeight, 0.0F, 1000.0F, ClientHooks.getGuiFarPlane()),
-            VertexSorting.ORTHOGRAPHIC_Z);
-        shaderPs.pushMatrix();
-        shaderPs.identity();
-        shaderPs.translate(0.0f, 0.0f, 10000f - net.neoforged.neoforge.client.ClientHooks.getGuiFarPlane());
-        RenderSystem.applyModelViewMatrix();
+        x = BOScreenMath.calcCenteredOffset(guiWidth, 320, width, renderScale);
+        y = BOScreenMath.calcCenteredOffset(guiHeight, 240, height, renderScale);
 
         final PoseStack newMs = new PoseStack();
-        newMs.translate(x, y, ms.pose().last().pose().m32());
+        newMs.translate(x, y, 0.0d);
         newMs.scale((float) renderScale, (float) renderScale, 1.0f);
-
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.enableDepthTest();
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
 
         try
         {
-            final BOGuiGraphics target = new BOGuiGraphics(ms.minecraft, newMs, ms.bufferSource());
+            final BOGuiGraphics target = new BOGuiGraphics(mc, graphics, newMs);
+            BOGuiGraphics.setActive(target);
             window.draw(target, calcRelativeX(mx), calcRelativeY(my));
 
-            if (ms.minecraft.screen == this)
+            if (mc.gui.screen() == this)
             {
                 int debugX = (int) (-x / renderScale) + 3;
                 if (Pane.debugging)
@@ -134,16 +111,10 @@ public class BOScreen extends Screen
         }
         finally
         {
-            // restore vanilla state
-            shaderPs.popMatrix();
-            RenderSystem.setProjectionMatrix(oldProjection, VertexSorting.ORTHOGRAPHIC_Z);
-            RenderSystem.applyModelViewMatrix();
-
-            NeoForgeRenderTypes.enableTextTextureLinearFiltering = oldFilteringValue;
+            BOGuiGraphics.setActive(null);
         }
     }
 
-    @Override
     public boolean keyPressed(final int key, final int scanCode, final int modifiers)
     {
         // keys without printable representation
@@ -165,7 +136,6 @@ public class BOScreen extends Screen
         return false;
     }
 
-    @Override
     public boolean charTyped(final char ch, final int key)
     {
         try
@@ -182,7 +152,6 @@ public class BOScreen extends Screen
         }
     }
 
-    @Override
     public boolean mouseClicked(final double mxIn, final double myIn, final int keyCode)
     {
         final double mx = calcRelativeX(mxIn);
@@ -211,7 +180,6 @@ public class BOScreen extends Screen
         return false;
     }
 
-    @Override
     public boolean mouseScrolled(final double mx, final double my, final double scrollHorizontalDiff, final double scrollVerticalDiff)
     {
         if (scrollVerticalDiff != 0)
@@ -232,7 +200,6 @@ public class BOScreen extends Screen
         return false;
     }
 
-    @Override
     public boolean mouseDragged(final double xIn, final double yIn, final int speed, final double deltaX, final double deltaY)
     {
         try
@@ -248,7 +215,6 @@ public class BOScreen extends Screen
         }
     }
 
-    @Override
     public boolean mouseReleased(final double mxIn, final double myIn, final int keyCode)
     {
         if (keyCode == GLFW.GLFW_MOUSE_BUTTON_LEFT)
@@ -347,7 +313,7 @@ public class BOScreen extends Screen
      */
     private double calcRelativeX(final double xIn)
     {
-        return (xIn * mcScale - x) / renderScale;
+        return BOScreenMath.calcRelative(xIn, mcScale, x, renderScale);
     }
 
     /**
@@ -355,7 +321,7 @@ public class BOScreen extends Screen
      */
     private double calcRelativeY(final double yIn)
     {
-        return (yIn * mcScale - y) / renderScale;
+        return BOScreenMath.calcRelative(yIn, mcScale, y, renderScale);
     }
 
     public double getRenderScale()

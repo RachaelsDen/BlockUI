@@ -1,20 +1,20 @@
 package com.ldtteam.blockui.util.texture;
 
-import com.google.gson.JsonObject;
 import com.ldtteam.blockui.Pane;
 import com.ldtteam.blockui.mod.BlockUI;
 import com.ldtteam.blockui.util.cursor.Cursor;
 import com.ldtteam.blockui.util.cursor.CursorUtils;
-import com.ldtteam.blockui.util.resloc.OutOfJarResourceLocation;
+import com.ldtteam.blockui.util.resloc.ExternalResourceRegistry;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.NativeImage.Format;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWImage;
@@ -32,7 +32,7 @@ import java.io.IOException;
 public class CursorTexture extends AbstractTexture
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CursorTexture.class);
-    private final ResourceLocation resourceLocation;
+    private final Identifier resourceLocation;
 
     private int hotspotX = 0;
     private int hotspotY = 0;
@@ -40,7 +40,7 @@ public class CursorTexture extends AbstractTexture
     @Nullable
     protected NativeImage nativeImage = null;
 
-    public CursorTexture(final ResourceLocation resLoc)
+    public CursorTexture(final Identifier resLoc)
     {
         this.resourceLocation = resLoc;
     }
@@ -72,12 +72,6 @@ public class CursorTexture extends AbstractTexture
 
     private void onDataChange()
     {
-        if (!RenderSystem.isOnRenderThread())
-        {
-            RenderSystem.recordRenderCall(this::onDataChange);
-            return;
-        }
-
         if (isCursorNow())
         {
             destroyCursorHandle();
@@ -137,7 +131,6 @@ public class CursorTexture extends AbstractTexture
         }
     }
 
-    @Override
     public void load(final ResourceManager resourceManager) throws IOException
     {
         if (nativeImage != null)
@@ -145,7 +138,7 @@ public class CursorTexture extends AbstractTexture
             close();
         }
 
-        final Resource resource = OutOfJarResourceLocation.getResourceHandle(resourceLocation, resourceManager);
+        final Resource resource = ExternalResourceRegistry.getResourceHandle(resourceLocation, resourceManager);
         try (var is = resource.open())
         {
             nativeImage = NativeImage.read(is);
@@ -156,7 +149,7 @@ public class CursorTexture extends AbstractTexture
             close();
         }
 
-        resource.metadata().getSection(CursorMetadataSection.SERIALIZER).ifPresent(metadata -> {
+        resource.metadata().getSection(CursorMetadataSection.TYPE).ifPresent(metadata -> {
             // manual set to avoid double onDataChange call
             this.hotspotX = metadata.hotspotX;
             this.hotspotY = metadata.hotspotY;
@@ -178,21 +171,10 @@ public class CursorTexture extends AbstractTexture
 
     public static record CursorMetadataSection(int hotspotX, int hotspotY)
     {
-        public static final CursorMetadataSectionSerializer SERIALIZER = new CursorMetadataSectionSerializer();
-    }
-
-    private static class CursorMetadataSectionSerializer implements MetadataSectionSerializer<CursorMetadataSection>
-    {
-        @Override
-        public String getMetadataSectionName()
-        {
-            return "ldtteam." + BlockUI.MOD_ID + ".cursor";
-        }
-
-        @Override
-        public CursorMetadataSection fromJson(final JsonObject jsonObject)
-        {
-            return new CursorMetadataSection(GsonHelper.getAsInt(jsonObject, "hotspot.x", 0), GsonHelper.getAsInt(jsonObject, "hotspot.y", 0));
-        }
+        public static final Codec<CursorMetadataSection> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Codec.INT.optionalFieldOf("hotspot.x", 0).forGetter(CursorMetadataSection::hotspotX),
+            Codec.INT.optionalFieldOf("hotspot.y", 0).forGetter(CursorMetadataSection::hotspotY)
+        ).apply(instance, CursorMetadataSection::new));
+        public static final MetadataSectionType<CursorMetadataSection> TYPE = new MetadataSectionType<>("ldtteam." + BlockUI.MOD_ID + ".cursor", CODEC);
     }
 }

@@ -1,43 +1,64 @@
 package com.ldtteam.blockui;
 
 import com.ldtteam.blockui.mod.item.BlockStateRenderingData;
-import com.ldtteam.blockui.util.SingleBlockGetter.SingleBlockNeighborhood;
 import com.ldtteam.blockui.util.cursor.Cursor;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.cursor.CursorType;
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+import org.joml.Vector3f;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix3f;
 
-public class BOGuiGraphics extends GuiGraphics
+public class BOGuiGraphics
 {
-    // Static instance should be fine since gui rendering is on single thread
-    private static final SingleBlockNeighborhood NEIGHBORHOOD = new SingleBlockNeighborhood();
+    private static final ThreadLocal<BOGuiGraphics> ACTIVE = new ThreadLocal<>();
 
-    private int cursorMaxDepth = -1;
-    private Cursor selectedCursor = Cursor.DEFAULT;
+    private final Minecraft minecraft;
+    private final GuiGraphicsExtractor extractor;
+    private final PoseStack pose;
+    private final CursorSelector cursorSelector = new CursorSelector();
 
-    public BOGuiGraphics(final Minecraft mc, final PoseStack ps, final BufferSource buffers)
+    public BOGuiGraphics(final Minecraft minecraft, final GuiGraphicsExtractor extractor, final PoseStack pose)
     {
-        super(mc, ps, buffers);
+        this.minecraft = minecraft;
+        this.extractor = extractor;
+        this.pose = pose;
+    }
+
+    public PoseStack pose()
+    {
+        return pose;
+    }
+
+    GuiGraphicsExtractor extractor()
+    {
+        return extractor;
+    }
+
+    static void setActive(@Nullable final BOGuiGraphics graphics)
+    {
+        if (graphics == null)
+        {
+            ACTIVE.remove();
+        }
+        else
+        {
+            ACTIVE.set(graphics);
+        }
+    }
+
+    @Nullable
+    static GuiGraphicsExtractor activeExtractor()
+    {
+        final BOGuiGraphics graphics = ACTIVE.get();
+        return graphics == null ? null : graphics.extractor();
     }
 
     private Font getFont(@Nullable final ItemStack itemStack)
@@ -53,14 +74,19 @@ public class BOGuiGraphics extends GuiGraphics
         return minecraft.font;
     }
 
+    public void renderItem(final ItemStack itemStack, final int x, final int y)
+    {
+        extractor.item(itemStack, x, y);
+    }
+
     public void renderItemDecorations(final ItemStack itemStack, final int x, final int y)
     {
-        super.renderItemDecorations(getFont(itemStack), itemStack, x, y);
+        extractor.itemDecorations(getFont(itemStack), itemStack, x, y);
     }
 
     public void renderItemDecorations(final ItemStack itemStack, final int x, final int y, @Nullable final String altStackSize)
     {
-        super.renderItemDecorations(getFont(itemStack), itemStack, x, y, altStackSize);
+        extractor.itemDecorations(getFont(itemStack), itemStack, x, y, altStackSize);
     }
 
     public int drawString(final String text, final float x, final float y, final int color)
@@ -70,24 +96,46 @@ public class BOGuiGraphics extends GuiGraphics
 
     public int drawString(final String text, final float x, final float y, final int color, final boolean shadow)
     {
-        return super.drawString(minecraft.font, text, x, y, color, shadow);
+        final ScreenPoint point = transformPoint(x, y);
+        extractor.text(minecraft.font, text, point.x(), point.y(), normalizeTextColor(color), shadow);
+        return point.x() + minecraft.font.width(text);
+    }
+
+    public int drawString(final FormattedCharSequence text, final float x, final float y, final int color, final boolean shadow)
+    {
+        final ScreenPoint point = transformPoint(x, y);
+        extractor.text(minecraft.font, text, point.x(), point.y(), normalizeTextColor(color), shadow);
+        return point.x() + minecraft.font.width(text);
+    }
+
+    private static int normalizeTextColor(final int color)
+    {
+        return (color & 0xFF000000) == 0 ? color | 0xFF000000 : color;
+    }
+
+    private ScreenPoint transformPoint(final float x, final float y)
+    {
+        final Vector3f transformed = pose().last().pose().transformPosition(new Vector3f(x, y, 0));
+        return new ScreenPoint(Math.round(transformed.x), Math.round(transformed.y));
     }
 
     public void setCursor(final Cursor cursor)
     {
-        if (pose().poseStack.size() >= cursorMaxDepth)
-        {
-            cursorMaxDepth = pose().poseStack.size();
-            selectedCursor = cursor;
-        }
+        cursorSelector.consider(0, cursor);
     }
 
-    /**
-     * @param debugXoffset debug string x offset
-     */
     public void applyCursor(final int debugXoffset)
     {
-        selectedCursor.apply();
+        final Cursor selectedCursor = cursorSelector.selectedCursor();
+        final CursorType mapped = mapCursor(selectedCursor);
+        if (mapped != null)
+        {
+            extractor.requestCursor(mapped);
+        }
+        else
+        {
+            selectedCursor.apply();
+        }
 
         if (Pane.debugging)
         {
@@ -95,99 +143,50 @@ public class BOGuiGraphics extends GuiGraphics
         }
     }
 
-    /**
-     * Render given blockState with model just like {@link #renderItem(ItemStack, int, int)}
-     *
-     * @param data      blockState rendering data
-     * @param itemStack backing itemStack for given blockState
-     */
+    private static CursorType mapCursor(final Cursor cursor)
+    {
+        if (cursor == Cursor.DEFAULT || cursor == Cursor.ARROW)
+        {
+            return CursorType.DEFAULT;
+        }
+        if (cursor == Cursor.TEXT_CURSOR)
+        {
+            return CursorTypes.IBEAM;
+        }
+        if (cursor == Cursor.CROSSHAIR)
+        {
+            return CursorTypes.CROSSHAIR;
+        }
+        if (cursor == Cursor.HAND)
+        {
+            return CursorTypes.POINTING_HAND;
+        }
+        if (cursor == Cursor.HORIZONTAL_RESIZE)
+        {
+            return CursorTypes.RESIZE_EW;
+        }
+        if (cursor == Cursor.VERTICAL_RESIZE)
+        {
+            return CursorTypes.RESIZE_NS;
+        }
+        if (cursor == Cursor.RESIZE)
+        {
+            return CursorTypes.RESIZE_ALL;
+        }
+        return null;
+    }
+
     public void renderBlockStateAsItem(final BlockStateRenderingData data, final ItemStack itemStack)
     {
-        BakedModel itemModel = minecraft.getItemRenderer().getModel(itemStack, null, null, 0);
-        if (!itemModel.isGui3d() || data.blockState().getRenderShape() == RenderShape.INVISIBLE)
-        {
-            // well, some items are bit dumb
-            itemModel = minecraft.getItemRenderer().getModel(new ItemStack(Blocks.STONE), null, null, 0);
-        }
-
-        // prepare pose just like itemStack rendering would do
-
-        pose().pushPose();
-        pose().last().normal().identity(); // reset normals cuz lighting
-        pose().translate(8, 8, 150);
-        pose().scale(16.0F, -16.0F, 16.0F);
-        ClientHooks.handleCameraTransforms(pose(), itemModel, ItemDisplayContext.GUI, false);
-
-        if (data.modelNeedsRotationFix())
-        {
-            final Matrix3f oldNormal = pose().last().normal();
-            pose().pushPose();
-            pose().rotateAround(Axis.YP.rotationDegrees(45), 0.0f, 0.5f, 0.0f);
-            pose().last().normal().set(oldNormal.rotate(Axis.YP.rotationDegrees(-45)));
-        }
-
-        pose().translate(-0.5F, -0.5F, -0.5F);
-
-        // render block and BE
-
-        final int light = LightTexture.pack(15, 15);
-        minecraft.getBlockRenderer()
-            .renderSingleBlock(data.blockState(), pose(), bufferSource(), light, OverlayTexture.NO_OVERLAY, data.modelData(), null);
-        if (data.blockEntity() != null)
-        {
-            try
-            {
-                minecraft.getBlockEntityRenderDispatcher()
-                    .getRenderer(data.blockEntity())
-                    .render(data.blockEntity(), 0, pose(), bufferSource(), light, OverlayTexture.NO_OVERLAY);
-            }
-            catch (final Exception e)
-            {
-                // well, noop then
-            }
-        }
-        flush();
-
-        if (data.modelNeedsRotationFix())
-        {
-            pose().popPose();
-            pose().translate(-0.5F, -0.5F, -0.5F);
-        }
-
-        // render fluid
-
-        final FluidState fluidState = data.blockState().getFluidState();
-        if (!fluidState.isEmpty())
-        {
-            final RenderType renderType = ItemBlockRenderTypes.getRenderLayer(fluidState);
-            pushMvApplyPose();
-
-            NEIGHBORHOOD.blockState = data.blockState();
-            minecraft.getBlockRenderer()
-                .renderLiquid(BlockPos.ZERO, NEIGHBORHOOD, bufferSource().getBuffer(renderType), data.blockState(), fluidState);
-
-            bufferSource().endBatch(renderType);
-            popMvPose();
-        }
-
-        pose().popPose();
-    }
-
-    public void pushMvApplyPose()
-    {
-        RenderSystem.getModelViewStack().pushMatrix();
-        RenderSystem.getModelViewStack().mul(pose().last().pose());
-        RenderSystem.applyModelViewMatrix();
-    }
-
-    public void popMvPose()
-    {
-        RenderSystem.getModelViewStack().popMatrix();
-        RenderSystem.applyModelViewMatrix();
+        throw new UnsupportedOperationException("renderBlockStateAsItem still needs 26.2 preview/model-data migration");
     }
 
     public static double getAltSpeedFactor()
     {
-        return Screen.hasAltDown() ? 5 : 1;
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_LALT) ? 5 : 1;
+    }
+
+    private record ScreenPoint(int x, int y)
+    {
     }
 }
