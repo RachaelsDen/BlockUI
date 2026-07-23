@@ -55,7 +55,24 @@ public final class ExternalResourceRegistry
         final GameProfile gameProfile,
         @Nullable final Function<Object, Identifier> textureSelector)
     {
-        return CompletableFuture.completedFuture(null);
+        return minecraft.getSkinManager().get(gameProfile).thenApply(skinOpt ->
+            skinOpt.map(skin -> {
+                final Object asset;
+                if (textureSelector != null)
+                {
+                    final Identifier selected = textureSelector.apply(skin);
+                    if (selected != null)
+                    {
+                        return selected;
+                    }
+                }
+                asset = skin.body();
+                if (asset instanceof final net.minecraft.core.ClientAsset.Texture tex)
+                {
+                    return tex.texturePath();
+                }
+                return null;
+            }).orElse(null));
     }
 
     public static boolean isExternal(final Identifier id)

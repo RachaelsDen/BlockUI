@@ -67,7 +67,20 @@ public class ClientEventSubscriber
 
         if (modifiersDown)
         {
-            if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_X))
+            if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_G))
+            {
+                openTestWindow(Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test.xml"), parent -> {
+                    parent.findPaneOfTypeByID("missing_out_of_jar", Image.class).setImage(OutOfJarResourceLocation.ofMinecraftFolder(BlockUI.MOD_ID, "missing_out_of_jar.png"), false);
+                    parent.findPaneOfTypeByID("working_out_of_jar", Image.class).setImage(OutOfJarResourceLocation.of(BlockUI.MOD_ID, Path.of("../../src/test/resources/button.png")), false);
+                    OutOfJarResourceLocation.ofMinecraftSkin(Minecraft.getInstance(), Minecraft.getInstance().getGameProfile(), null)
+                        .thenAccept(resLoc -> parent.findPaneOfTypeByID("player_skin", Image.class).setImage(resLoc, false));
+                    OutOfJarResourceLocation.ofMinecraftSkin(Minecraft.getInstance(), Minecraft.getInstance().getGameProfile(), skin -> ((net.minecraft.world.entity.player.PlayerSkin) skin).cape().texturePath())
+                        .thenAccept(resLoc -> {if (resLoc!=null){parent.findPaneOfTypeByID("player_cape", Image.class).setImage(resLoc, false);}});
+                    OutOfJarResourceLocation.ofMinecraftSkin(Minecraft.getInstance(), Minecraft.getInstance().getGameProfile(), skin -> ((net.minecraft.world.entity.player.PlayerSkin) skin).elytra().texturePath())
+                        .thenAccept(resLoc -> {if (resLoc!=null){parent.findPaneOfTypeByID("player_elytra", Image.class).setImage(resLoc, false);}});
+                });
+            }
+            else if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_X))
             {
                 final BOWindow window = new BOWindow();
                 int id = 0;
