@@ -1,14 +1,11 @@
 package com.ldtteam.blockui.mod;
 
-import com.ldtteam.blockui.AtlasManager;
 import com.ldtteam.blockui.Loader;
-import net.minecraft.client.renderer.BiomeColors;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterTextureAtlasesEvent;
-import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.event.ModMismatchEvent;
 
 public class ClientLifecycleSubscriber
@@ -22,13 +19,10 @@ public class ClientLifecycleSubscriber
     @SubscribeEvent
     public static void onRegisterTextureAtlases(final RegisterTextureAtlasesEvent event)
     {
-        // deferred: native atlas registration for custom GUI atlases
-    }
-
-    @SubscribeEvent
-    public static void onRegisterBlockColor(final RegisterColorHandlersEvent.BlockTintSources event)
-    {
-        // deferred: water cauldron tint registration on 26.2
+        event.register(new AtlasManager.AtlasConfig(
+            Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui"),
+            Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "blockui_gui"),
+            false));
     }
 
     @SubscribeEvent

@@ -67,19 +67,7 @@ public class ClientEventSubscriber
 
         if (modifiersDown)
         {
-            if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_T))
-            {
-                openTestWindow(Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test2.xml"));
-            }
-            else if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_B))
-            {
-                openTestWindow(Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test3.xml"), BlockStateTestGui::setup);
-            }
-            else if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_S))
-            {
-                openTestWindow(Identifier.fromNamespaceAndPath(BlockUI.MOD_ID, "gui/test4.xml"), ScrollingListsGui::setup);
-            }
-            else if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_X))
+            if (InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_X))
             {
                 final BOWindow window = new BOWindow();
                 int id = 0;
