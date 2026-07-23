@@ -74,19 +74,22 @@ public class BOGuiGraphics
         return minecraft.font;
     }
 
-    public void renderItem(final ItemStack itemStack, final int x, final int y)
+    public void renderItem(final ItemStack itemStack, final float x, final float y)
     {
-        extractor.item(itemStack, x, y);
+        final ScreenPoint point = transformPoint(x, y);
+        extractor.item(itemStack, point.x(), point.y());
     }
 
-    public void renderItemDecorations(final ItemStack itemStack, final int x, final int y)
+    public void renderItemDecorations(final ItemStack itemStack, final float x, final float y)
     {
-        extractor.itemDecorations(getFont(itemStack), itemStack, x, y);
+        final ScreenPoint point = transformPoint(x, y);
+        extractor.itemDecorations(getFont(itemStack), itemStack, point.x(), point.y());
     }
 
-    public void renderItemDecorations(final ItemStack itemStack, final int x, final int y, @Nullable final String altStackSize)
+    public void renderItemDecorations(final ItemStack itemStack, final float x, final float y, @Nullable final String altStackSize)
     {
-        extractor.itemDecorations(getFont(itemStack), itemStack, x, y, altStackSize);
+        final ScreenPoint point = transformPoint(x, y);
+        extractor.itemDecorations(getFont(itemStack), itemStack, point.x(), point.y(), altStackSize);
     }
 
     public int drawString(final String text, final float x, final float y, final int color)
