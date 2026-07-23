@@ -49,7 +49,7 @@ public class SpriteTexture extends AbstractTexture implements TickableTexture
     @Override
     public void tick()
     {
-        // deferred: animated sprite ticking needs the 26.2 texture upload path
+        // TODO: animated sprite ticking needs the 26.2 texture upload path
     }
 
     @Override

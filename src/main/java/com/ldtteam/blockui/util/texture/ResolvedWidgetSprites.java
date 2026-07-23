@@ -77,7 +77,7 @@ public record ResolvedWidgetSprites(ResolvedBlit enabled,
     {
         if (a == b)
         {
-            // deferred: shader-color modulation needs the 26.2 render-state equivalent
+            // TODO: shader-color modulation needs the 26.2 render-state equivalent
         }
     }
 }

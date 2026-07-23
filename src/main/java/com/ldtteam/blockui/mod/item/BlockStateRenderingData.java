@@ -19,7 +19,6 @@ import java.util.function.Function;
 
 /**
  * Holds blockstate rendering data for UIs.
- * The richer 26.2 preview/model-data integration is deferred until the dedicated preview batch.
  */
 public record BlockStateRenderingData(BlockState blockState,
     @Nullable BlockEntity blockEntity,

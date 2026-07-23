@@ -1,21 +1,17 @@
 package com.ldtteam.blockui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.data.AtlasIds;
-import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.metadata.gui.GuiMetadataSection;
 import net.minecraft.client.resources.metadata.gui.GuiSpriteScaling;
+import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.resources.PreparableReloadListener;
 
 import java.nio.file.Path;
-import java.util.function.Consumer;
 
 /**
- * 26.2 compatibility note:
- * custom per-mod gui atlas registration is deferred; this compatibility batch falls back to the vanilla gui sprite path.
+ * Provides access to the GUI sprite atlas and sprite scaling metadata.
+ * Custom mod atlas registration is handled via RegisterTextureAtlasesEvent in ClientLifecycleSubscriber.
  */
 public class AtlasManager
 {
@@ -25,9 +21,9 @@ public class AtlasManager
     {
     }
 
-    public void addAtlas(final Consumer<PreparableReloadListener> resourceRegistry, final String modId)
+    public void addAtlas(final java.util.function.Consumer<net.minecraft.server.packs.resources.PreparableReloadListener> resourceRegistry, final String modId)
     {
-        // deferred: native atlas registration via RegisterTextureAtlasesEvent / AtlasConfig
+        // no-op: atlas registration is handled by ClientLifecycleSubscriber.onRegisterTextureAtlases
     }
 
     public TextureAtlasSprite getSprite(final Identifier resLoc)
@@ -37,7 +33,7 @@ public class AtlasManager
 
     public void dumpAtlases(final Path dumpingFolder)
     {
-        // deferred: custom atlas dumping depends on the 26.2 atlas registration redesign
+        // not yet implemented for the 26.2 atlas system
     }
 
     public static GuiSpriteScaling getSpriteScaling(final TextureAtlasSprite textureAtlasSprite)

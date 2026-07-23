@@ -36,14 +36,12 @@ public final class OutOfJarTexture
             return textureManager.getTexture(resLoc);
         }
 
-        // Check if already registered
         final AbstractTexture existing = textureManager.getTexture(resLoc);
         if (!(existing instanceof MissingHolder))
         {
             return existing;
         }
 
-        // Register and load a file-backed texture
         final Path path = ExternalResourceRegistry.getPath(resLoc);
         if (path != null)
         {
@@ -79,11 +77,5 @@ public final class OutOfJarTexture
         }
     }
 
-    /**
-     * Placeholder used by {@link #assertLoaded} to detect unregistered textures.
-     * TextureManager returns this for unknown identifiers.
-     */
-    private static final class MissingHolder extends AbstractTexture
-    {
-    }
+    private static final class MissingHolder extends AbstractTexture {}
 }
