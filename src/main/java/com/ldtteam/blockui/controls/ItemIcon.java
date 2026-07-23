@@ -16,6 +16,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -107,9 +108,19 @@ public class ItemIcon extends Pane
             return;
         }
 
+        final var level = Minecraft.getInstance().level;
+        if (level == null)
+        {
+            return;
+        }
+
         try
         {
-            BuiltInRegistries.ITEM.get(pendingItemId).ifPresent(item -> this.itemStack = new ItemStack(item));
+            level.registryAccess()
+                .lookupOrThrow(BuiltInRegistries.ITEM.key())
+                .get(pendingItemId)
+                .filter(Holder::areComponentsBound)
+                .ifPresent(item -> this.itemStack = new ItemStack(item));
         }
         catch (final RuntimeException ex)
         {
