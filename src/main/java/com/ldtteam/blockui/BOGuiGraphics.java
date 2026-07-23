@@ -10,8 +10,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.joml.Vector3f;
 import org.jetbrains.annotations.Nullable;
@@ -181,7 +183,26 @@ public class BOGuiGraphics
 
     public void renderBlockStateAsItem(final BlockStateRenderingData data, final ItemStack itemStack)
     {
-        throw new UnsupportedOperationException("renderBlockStateAsItem still needs 26.2 preview/model-data migration");
+        final ItemStack renderStack;
+        if (itemStack.isEmpty())
+        {
+            renderStack = itemStack;
+        }
+        else
+        {
+            renderStack = itemStack.copy();
+            BlockItemStateProperties props = BlockItemStateProperties.EMPTY;
+            for (final var property : data.blockState().getProperties())
+            {
+                props = props.with(property, data.blockState());
+            }
+            if (!props.isEmpty())
+            {
+                renderStack.set(DataComponents.BLOCK_STATE, props);
+            }
+        }
+        final ScreenPoint point = transformPoint(0, 0);
+        extractor.item(renderStack, point.x(), point.y());
     }
 
     public static double getAltSpeedFactor()
